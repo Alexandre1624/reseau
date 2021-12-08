@@ -1,8 +1,8 @@
 package application;
 
-public class UdpManager {
+public class UDPManager {
     // maybe we should not create a class but an astract class which contains only methods?
-    public UdpManager() {
+    public UDPManager() {
 
     }
 
