@@ -1,6 +1,7 @@
 package shared;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class Utils {
 
@@ -41,5 +42,18 @@ public class Utils {
             return 0x00 << 24 | 0x00 << 16 | (b[0] & 0xff) << 8 | (b[1] & 0xff);
 
         return 0;
+    }
+
+    public static byte[] getByteFromString(String delimiter, List<String> argumentsFromEvent) {
+        String message = String.join(delimiter, argumentsFromEvent); // "foo and bar and baz"
+        return  message.getBytes();
+    }
+
+    public long getTimeToSendCommand(String time) {
+        return Long.valueOf(time) + System.currentTimeMillis();
+    }
+
+    public static String logInfo(int node) {
+        return System.currentTimeMillis()+";"+node+";";
     }
 }

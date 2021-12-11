@@ -1,8 +1,10 @@
 package application;
 
 import models.Node;
+import shared.Utils;
 
-import java.net.InetAddress;
+import java.io.IOException;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -16,15 +18,19 @@ public class RPIApp extends Thread{
     protected int bestDistance = 0;
     private UDPManager udpManager = null;
     protected Logger log;
+    protected DatagramSocket socket;
+    // taille maximale d'un datagramme, utilisée pour le buffer de reception
+    static int MAX_DGRAM_SIZE = 100;
 
     /**
      * Constructor of the class
      * @param Node node
      */
-    public RPIApp(Node node) {
+    public RPIApp(Node node) throws SocketException {
         this.idNode = node.id;
         this.address = node.address;
         this.port = node.port;
+
         log = Logger.getLogger(this.getClass().getSimpleName() + " " +  this.idNode);
     }
 
@@ -39,7 +45,25 @@ public class RPIApp extends Thread{
     }
 
     public void run() {// method from thread
-        log.info(log.getName()+ ": I am running");
+       /* try {
+            sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }*/
+        System.out.println(this.getClass().getSimpleName() +port);
+        try {
+            this.socket = new DatagramSocket(port);
+            log.info( Utils.logInfo(this.idNode)+"start");
+            DatagramPacket packet = new DatagramPacket(new byte[MAX_DGRAM_SIZE], MAX_DGRAM_SIZE);
+            socket.receive(packet);
+            System.out.println("receive "+ packet.toString());
+        } catch (SocketException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
     }
 
     /**
@@ -107,6 +131,7 @@ public class RPIApp extends Thread{
 
     }
 
-
-
+    public void createThread() {
+        this.start();
+    }
 }
