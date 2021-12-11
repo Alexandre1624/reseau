@@ -16,17 +16,9 @@ public class RootDevice extends RPIApp{
     public RootDevice(Node node) {
         super(node);
         super.bestDistance = 0;
+        log = Logger.getLogger(this.getClass().getSimpleName() + " " + this.idNode);
     }
-    /**
-     * Constructor of the class
-     * @param int id
-     * @param InetAddress address
-     * @param int port
-     */
-    public RootDevice(int id, InetAddress address, int port) {
-        super(id, address, port);
-        super.bestDistance = 0;
-    }
+
 
     /**
      * Overload toSTring() method

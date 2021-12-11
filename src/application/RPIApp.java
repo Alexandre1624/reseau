@@ -15,7 +15,7 @@ public class RPIApp extends Thread{
     protected RPIApp bestReceiver = null;
     protected int bestDistance = 0;
     private UDPManager udpManager = null;
-    private Logger log;
+    protected Logger log;
 
     /**
      * Constructor of the class
@@ -25,18 +25,7 @@ public class RPIApp extends Thread{
         this.idNode = node.id;
         this.address = node.address;
         this.port = node.port;
-    }
-
-    /**
-     * Constructor of the class
-     * @param int id
-     * @param InetAddress address
-     * @param int port
-     */
-    public RPIApp(int id, InetAddress address, int port) {
-        this.idNode = id;
-        this.address = address;
-        this.port = port;
+        log = Logger.getLogger(this.getClass().getSimpleName() + " " +  this.idNode);
     }
 
     /**
@@ -46,11 +35,11 @@ public class RPIApp extends Thread{
     public String toString(){
         List<Integer> temp = new ArrayList();
         for(RPIApp neighbor : neighbors){ temp.add(neighbor.idNode); }
-        return String.format("[RPIApp id:#%d | address:%s | port:%d | neighbors:%s]",idNode, address, port, temp.toString());
+        return String.format("[RPIApp id:#%d | address:%s | port:%d | neighbors:%s]"+System.lineSeparator(),idNode, address, port, temp.toString());
     }
 
     public void run() {// method from thread
-
+        log.info(log.getName()+ ": I am running");
     }
 
     /**

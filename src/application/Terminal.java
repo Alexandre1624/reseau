@@ -6,13 +6,12 @@ import models.Link;
 import models.Node;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Terminal {
     private ParserConfig parserConfig;
-    private List<RPIApp> apps = new LinkedList();
+    private Map<Integer,RPIApp> devices = new HashMap<>();// we get device in O(1)
 
     public Terminal(String filePath) throws IOException, FileFormatException {
        this.parserConfig = new ParserConfig(filePath);
@@ -21,27 +20,29 @@ public class Terminal {
         this.initApps(this.parserConfig.getNodes(), this.parserConfig.getLinks(), this.parserConfig.getEvents());
     }
     private void initApps(List<Node> nodes, List<Link> links, List<Event> events) {
-        List<RPIApp> neighbors = new ArrayList();
-
         /**
          * Creation of the RootDevice (id==1) and others RPIApps
+         * more legibility with stream java
          */
-        for(Node node : nodes){
-            if (node.id == 1) {
-                apps.add(0, new RootDevice(node));
-            } else {
-                apps.add((node.id-1), new RPIApp(node));
-            }
-        }
+        devices = nodes.stream().collect(Collectors.toMap(node -> node.id, node -> node.id ==1 ? new RootDevice(node): new RPIApp(node)));
 
         /**
          * Linking each neighbors of RPIApp
          */
         for(Link link : links){
-            RPIApp rPIAppTemp = apps.get(link.destinationId-1);
-            apps.get(link.sourceId-1).addNeighbor(rPIAppTemp);
+             devices.get(link.sourceId).addNeighbor(devices.get(link.destinationId));
         }
-        System.out.println(apps);
 
+        this.runApps();
     }
+
+    private void runApps() {
+        /**
+         * Run apps
+         */
+        devices.forEach((key, value) -> {
+            value.run();
+        });
+    }
+
 }
