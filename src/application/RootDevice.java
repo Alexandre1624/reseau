@@ -49,7 +49,7 @@ public class RootDevice extends RPIApp {
         openValve(idNode, 0);
     }
 
-    public void sendEvent(Event event) throws InterruptedException, IOException {
+    public void sendMessage(Event event) throws InterruptedException, IOException {
         Utils.logInfo(this.idNode);
         sleep(event.delay);
         switch (event.args.get(0)) {
@@ -67,7 +67,5 @@ public class RootDevice extends RPIApp {
             default:
                 break;
         }
-
-
     }
 }

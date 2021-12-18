@@ -6,13 +6,9 @@ import models.Link;
 import models.Node;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static java.lang.Thread.sleep;
 
 public class Terminal {
     private ParserConfig parserConfig;
@@ -64,11 +60,8 @@ public class Terminal {
         for (Event event : this.events) {
             if (event.nodeId==1) {
                 RootDevice rootDevice = (RootDevice) devices.get(event.nodeId);
-                rootDevice.sendEvent(event);
+                rootDevice.sendMessage(event);
             }
-
         }
     }
-
-
 }

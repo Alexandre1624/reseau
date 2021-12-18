@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Utils {
-
+    public static int portBase = 4444;
     public static byte[] Encode(String message, ArrayList<Integer> Nodes) {
         return null;
     }

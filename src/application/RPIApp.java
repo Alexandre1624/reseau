@@ -1,5 +1,6 @@
 package application;
 
+import models.Event;
 import models.Node;
 import shared.Utils;
 
@@ -50,13 +51,14 @@ public class RPIApp extends Thread{
         } catch (InterruptedException e) {
             e.printStackTrace();
         }*/
-        System.out.println(this.getClass().getSimpleName() +port);
+        System.out.println(this.getClass().getSimpleName() + port);
         try {
             this.socket = new DatagramSocket(port);
             log.info( Utils.logInfo(this.idNode)+"start");
-            DatagramPacket packet = new DatagramPacket(new byte[MAX_DGRAM_SIZE], MAX_DGRAM_SIZE);
-            socket.receive(packet);
-            System.out.println("receive "+ packet.toString());
+            this.sendMessage();
+            this.onReceiveMessage();
+            
+            
         } catch (SocketException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -64,6 +66,29 @@ public class RPIApp extends Thread{
         }
 
 
+    }
+
+    private void sendMessage() {
+
+    }
+
+    private void onReceiveMessage() throws IOException {
+        DatagramPacket packet = new DatagramPacket(new byte[MAX_DGRAM_SIZE], MAX_DGRAM_SIZE);
+        socket.receive(packet);
+        System.out.println("receive "+ new String (packet.getData()));
+        System.out.println("receive from "+ packet.getPort());
+    }
+
+    protected void sendPacketDistance() {
+
+    }
+
+    protected void receivePacketDistance() {
+
+    }
+
+    public void createThread() {
+        this.start();
     }
 
     /**
@@ -121,17 +146,5 @@ public class RPIApp extends Thread{
     }
     public final void setBestDistance(int bestDistance) {
         this.bestDistance = bestDistance;
-    }
-
-    protected void sendPacketDistance() {
-
-    }
-
-    protected void receivePacketDistance() {
-
-    }
-
-    public void createThread() {
-        this.start();
     }
 }
