@@ -1,12 +1,12 @@
 package application;
 
-import models.Event;
+
 import models.Node;
 import shared.Utils;
-
 import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -75,8 +75,14 @@ public class RPIApp extends Thread{
     private void onReceiveMessage() throws IOException {
         DatagramPacket packet = new DatagramPacket(new byte[MAX_DGRAM_SIZE], MAX_DGRAM_SIZE);
         socket.receive(packet);
-        System.out.println("receive "+ new String (packet.getData()));
-        System.out.println("receive from "+ packet.getPort());
+        //System.out.println("receive "+ new String (packet.getData()));\
+        System.out.println(Utils.bytesToInt(packet.getData()));
+        String [] commandReceived = Utils.splitDataIntoArguments(new String (packet.getData()));
+        System.out.println(commandReceived[0].hashCode());
+    }
+
+    private String[] splitDataIntoArguments(String packet) {
+        return packet.split(";");
     }
 
     protected void sendPacketDistance() {

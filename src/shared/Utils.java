@@ -1,5 +1,9 @@
 package shared;
 
+import models.CommandEncrypted;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,9 +48,32 @@ public class Utils {
         return 0;
     }
 
-    public static byte[] getByteFromString(String delimiter, List<String> argumentsFromEvent) {
-        String message = String.join(delimiter, argumentsFromEvent); // "foo and bar and baz"
-        return  message.getBytes();
+    public static byte[] getByteFromString(String delimiter, List<String> argumentsFromEvent) throws IOException {
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
+        for (String arg : argumentsFromEvent) {
+            String element = "temperature";
+            int command = CommandEncrypted.valueOfCommand(element);
+            if (command != 0) {
+                //2015272095
+
+                System.out.println(new String(intToBytes(command)));
+                outputStream.write(intToBytes(command));
+            } else {
+                outputStream.write(arg.getBytes());
+            }
+            outputStream.write(";".getBytes());
+
+
+        }
+      /*  byte c[] = outputStream.toByteArray();
+        argumentsFromEvent.forEach(System.out::println);
+        String message = String.join(delimiter, argumentsFromEvent);*/
+        return  outputStream.toByteArray();
+    }
+
+    public static String[] splitDataIntoArguments(String packet) {
+        return packet.split(";");
     }
 
     public long getTimeToSendCommand(String time) {

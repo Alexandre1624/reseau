@@ -55,7 +55,6 @@ public class RootDevice extends RPIApp {
         switch (event.args.get(0)) {
             case "advertise":
                 event.args.add("0");
-                log.info("advertisement");
                 byte[] message = Utils.getByteFromString(";", event.args);
                 for(RPIApp rpi: this.neighbors) {
                     DatagramPacket sendPacket = new DatagramPacket(message,message.length,this.address, rpi.getPort());
