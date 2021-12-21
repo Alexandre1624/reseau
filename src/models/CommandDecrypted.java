@@ -8,19 +8,20 @@ public enum CommandDecrypted { // Nous envoyons unn identifiant unique sous form
 
     private int hashCode;
 
-    private CommandDecrypted(int hashCode) {
+    CommandDecrypted(int hashCode) {
         this.hashCode = hashCode;
     }
 
     private int getHashCode() {
         return this.hashCode;
     }
-    public static int valueOfCommand(String command) {
+
+    public static CommandDecrypted valueOfCommandToDecrypt(int hashCode) {
         for (CommandDecrypted commandEncrypted : values()) {
-            if (commandEncrypted.hashCode == command.hashCode()) {
-                return commandEncrypted.hashCode;
+            if (commandEncrypted.hashCode == hashCode) {
+                return commandEncrypted;
             }
         }
-        return 0;
+        return null;
     }
 }

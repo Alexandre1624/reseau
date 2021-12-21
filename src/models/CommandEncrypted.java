@@ -3,12 +3,11 @@ package models;
 public enum CommandEncrypted {
     advertise("advertise".hashCode()),
     state("state".hashCode()),
-    temperature("temperature".hashCode()),
-    alex("alex".hashCode());
+    temperature("temperature".hashCode());
 
     private int hashCode;
 
-    private CommandEncrypted(int hashCode) {
+    CommandEncrypted(int hashCode) {
         this.hashCode = hashCode;
     }
 

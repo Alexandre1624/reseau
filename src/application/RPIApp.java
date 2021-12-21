@@ -1,6 +1,7 @@
 package application;
 
 
+import models.CommandDecrypted;
 import models.Node;
 import shared.Utils;
 import java.io.IOException;
@@ -76,9 +77,20 @@ public class RPIApp extends Thread{
         DatagramPacket packet = new DatagramPacket(new byte[MAX_DGRAM_SIZE], MAX_DGRAM_SIZE);
         socket.receive(packet);
         //System.out.println("receive "+ new String (packet.getData()));\
-        System.out.println(Utils.bytesToInt(packet.getData()));
         String [] commandReceived = Utils.splitDataIntoArguments(new String (packet.getData()));
-        System.out.println(commandReceived[0].hashCode());
+        switch (CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) != null ? CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) : null) {
+            case advertise:
+                log.info("receive distance");
+                break;
+            case state:
+                log.info("receive state");
+                break;
+            case temperature:
+                log.info("receive temperature");
+                break;
+
+        }
+
     }
 
     private String[] splitDataIntoArguments(String packet) {
