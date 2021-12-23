@@ -18,7 +18,7 @@ public class RPIApp extends Thread{
     protected List<RPIApp> neighbors = new ArrayList();
     protected RPIApp bestReceiver = null;
     protected int bestDistance = 0;
-    private UDPManager udpManager = null;
+    
     protected Logger log;
     protected DatagramSocket socket;
     // taille maximale d'un datagramme, utilisée pour le buffer de reception
@@ -28,7 +28,7 @@ public class RPIApp extends Thread{
      * Constructor of the class
      * @param Node node
      */
-    public RPIApp(Node node) throws SocketException {
+    public RPIApp(Node node) {
         this.idNode = node.id;
         this.address = node.address;
         this.port = node.port;
@@ -47,40 +47,68 @@ public class RPIApp extends Thread{
     }
 
     public void run() {// method from thread
-       /* try {
-            sleep(2000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }*/
         System.out.println(this.getClass().getSimpleName() + port);
         try {
             this.socket = new DatagramSocket(port);
             log.info( Utils.logInfo(this.idNode)+"start");
-            this.sendMessage();
             this.onReceiveMessage();
-            
             
         } catch (SocketException e) {
             e.printStackTrace();
+
         } catch (IOException e) {
             e.printStackTrace();
-        }
 
+        }
 
     }
 
-    private void sendMessage() {
+    /**
+     * 
+     * @param packet
+     * @throws IOException
+     */
+    protected void flooding(DatagramPacket packet) throws IOException {
+        RPIApp rpiSource = this.findNeigbor(packet.getAddress(), packet.getPort());
 
+        for(RPIApp rpi: this.neighbors) {
+            // On renvoie le paquet à tous les voisins excepté à la source
+            if ((rpi.getAddress() != packet.getAddress()) && (rpi.getPort() != packet.getPort())) {
+                System.out.println(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
+
+                packet.setAddress(rpi.getAddress());
+                packet.setPort(rpi.getPort());
+                this.socket.send(packet);
+
+            }
+            
+        }
     }
 
     private void onReceiveMessage() throws IOException {
         DatagramPacket packet = new DatagramPacket(new byte[MAX_DGRAM_SIZE], MAX_DGRAM_SIZE);
         socket.receive(packet);
+        RPIApp rpiSource = this.findNeigbor(packet.getAddress(), packet.getPort());
+
         //System.out.println("receive "+ new String (packet.getData()));\
         String [] commandReceived = Utils.splitDataIntoArguments(new String (packet.getData()));
-        switch (CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) != null ? CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) : null) {
+        CommandDecrypted commandeDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) != null ? CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) : null;
+        int bestDistanceNew = Integer.valueOf(commandReceived[1]) + 1;
+        System.out.println("distance=" + bestDistanceNew);
+        
+        switch (commandeDecrypted) {
             case advertise:
                 log.info("receive distance");
+
+                // On recherche le bestReceiver (ca devrait etre sender) ainsi que la bestDistance
+                if (this.bestReceiver == null) this.bestReceiver = rpiSource; 
+                if (bestDistanceNew < this.bestDistance) {
+                    this.bestDistance = bestDistanceNew;
+                    this.bestReceiver = rpiSource;
+                } else if (bestDistanceNew == this.bestDistance) {
+                    if (rpiSource.getIdNode() < this.bestReceiver.getIdNode()) this.bestReceiver = rpiSource;
+                }
+                
                 break;
             case state:
                 log.info("receive state");
@@ -90,6 +118,7 @@ public class RPIApp extends Thread{
                 break;
 
         }
+        flooding(packet);
 
     }
 
@@ -124,6 +153,20 @@ public class RPIApp extends Thread{
     public void removeNeighbor(RPIApp rPIApp) {
         // ne devrait être utilisé que dans la partie bonus + à adapter
         this.neighbors.remove(rPIApp);
+    }
+
+    /**
+     * Find RPIApp neighbor by address and port
+     * @param InetAddress address
+     * @param int port
+     * @return RPIApp
+     */
+    public RPIApp findNeigbor(InetAddress address, int port) {
+        for(RPIApp rpi: this.neighbors) {
+            if ((rpi.getAddress() != address) && (rpi.getPort() != port)) return rpi;
+        }
+
+        return null;
     }
 
     // GETTERS //

@@ -50,15 +50,16 @@ public class RootDevice extends RPIApp {
     }
 
     public void sendMessage(Event event) throws InterruptedException, IOException {
-        Utils.logInfo(this.idNode);
+        //Utils.logInfo(this.idNode);
         sleep(event.delay);
         switch (event.args.get(0)) {
             case "advertise":
+                log.info("advertise");
                 event.args.add("0");
                 byte[] message = Utils.getByteFromString(";", event.args);
                 for(RPIApp rpi: this.neighbors) {
-                    DatagramPacket sendPacket = new DatagramPacket(message,message.length,this.address, rpi.getPort());
-                    this.socket.send(sendPacket);
+                    DatagramPacket sendPacket = new DatagramPacket(message,message.length, this.address, this.port);
+                    this.flooding(sendPacket);
                 }
                 break;
             case "vanne":
