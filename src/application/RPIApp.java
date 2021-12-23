@@ -2,6 +2,7 @@ package application;
 
 
 import models.CommandDecrypted;
+import models.CommandEncrypted;
 import models.Node;
 import shared.Utils;
 import java.io.IOException;
@@ -17,7 +18,7 @@ public class RPIApp extends Thread{
     protected int port;
     protected List<RPIApp> neighbors = new ArrayList();
     protected RPIApp bestReceiver = null;
-    protected int bestDistance = 0;
+    protected int bestDistance = 9999;
     
     protected Logger log;
     protected DatagramSocket socket;
@@ -69,7 +70,6 @@ public class RPIApp extends Thread{
      * @throws IOException
      */
     protected void flooding(DatagramPacket packet) throws IOException {
-        RPIApp rpiSource = this.findNeigbor(packet.getAddress(), packet.getPort());
 
         for(RPIApp rpi: this.neighbors) {
             // On renvoie le paquet à tous les voisins excepté à la source
@@ -95,7 +95,7 @@ public class RPIApp extends Thread{
         CommandDecrypted commandeDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) != null ? CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) : null;
         int bestDistanceNew = Integer.valueOf(commandReceived[1]) + 1;
         System.out.println("distance=" + bestDistanceNew);
-        
+        byte[] message = new byte[0];
         switch (commandeDecrypted) {
             case advertise:
                 log.info("receive distance");
@@ -108,17 +108,19 @@ public class RPIApp extends Thread{
                 } else if (bestDistanceNew == this.bestDistance) {
                     if (rpiSource.getIdNode() < this.bestReceiver.getIdNode()) this.bestReceiver = rpiSource;
                 }
-                
+                List<String> messageToSendToNeighboor = new ArrayList<String>();
+                messageToSendToNeighboor.add("advertise");
+                messageToSendToNeighboor.add(String.valueOf(this.bestDistance));
+                message = Utils.getByteFromString(";",messageToSendToNeighboor);
+                packet.setData(message);
                 break;
             case state:
                 log.info("receive state");
                 break;
-            case temperature:
-                log.info("receive temperature");
-                break;
 
         }
-        flooding(packet);
+
+        this.flooding(packet);
 
     }
 
