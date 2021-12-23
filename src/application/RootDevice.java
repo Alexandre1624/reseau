@@ -58,8 +58,9 @@ public class RootDevice extends RPIApp {
                 event.args.add("0");
                 byte[] message = Utils.getByteFromString(";", event.args);
                 for(RPIApp rpi: this.neighbors) {
-                    DatagramPacket sendPacket = new DatagramPacket(message,message.length, this.address, this.port);
-                    this.flooding(sendPacket);
+                    DatagramPacket sendPacket = new DatagramPacket(message,message.length, rpi.getAddress(), rpi.getPort());
+                    socket.send(sendPacket);
+                    System.out.println(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
                 }
                 break;
             case "vanne":
