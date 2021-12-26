@@ -2,13 +2,11 @@ package application;
 
 
 import models.CommandDecrypted;
-import models.CommandEncrypted;
 import models.Node;
 import shared.Utils;
 import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -88,9 +86,9 @@ public class RPIApp extends Thread{
     private void onReceiveMessage() throws IOException {
         DatagramPacket packet = new DatagramPacket(new byte[MAX_DGRAM_SIZE], MAX_DGRAM_SIZE);
         socket.receive(packet);
-        RPIApp rpiSource = this.findNeigbor(packet.getAddress(), packet.getPort());
+        RPIApp rpiSource = this.findNeighbour(packet.getAddress(), packet.getPort());
 
-        String [] commandReceived = Utils.splitDataIntoArguments(new String (packet.getData()));
+        String [] commandReceived = Utils.splitDataIntoArguments(new String (packet.getData(), 0, packet.getLength()));
         CommandDecrypted commandDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) != null ? CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) : null;
 
         byte[] message = new byte[0];
@@ -107,11 +105,8 @@ public class RPIApp extends Thread{
                 } else if (bestDistanceNew == this.bestDistance) {
                     if (rpiSource.getIdNode() < this.bestReceiver.getIdNode()) this.bestReceiver = rpiSource;
                 }
-                List<String> messageToSendToNeighboor = new ArrayList<String>();
-                messageToSendToNeighboor.add("advertise");
-                messageToSendToNeighboor.add(String.valueOf(this.bestDistance));
-                message = Utils.getByteFromString(";",messageToSendToNeighboor);
-                packet.setData(message);
+
+                packet = Utils.createPacketToReSend("advertise",String.valueOf(this.bestDistance),packet);
                 break;
             case vanne:
                 log.info("receive vanne");
@@ -162,11 +157,10 @@ public class RPIApp extends Thread{
      * @param int port
      * @return RPIApp
      */
-    public RPIApp findNeigbor(InetAddress address, int port) {
+    public RPIApp findNeighbour(InetAddress address, int port) {
         for(RPIApp rpi: this.neighbors) {
             if ((rpi.getAddress() != address) && (rpi.getPort() != port)) return rpi;
         }
-
         return null;
     }
 

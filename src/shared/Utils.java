@@ -4,6 +4,7 @@ import models.CommandEncrypted;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.DatagramPacket;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,6 +47,16 @@ public class Utils {
             return 0x00 << 24 | 0x00 << 16 | (b[0] & 0xff) << 8 | (b[1] & 0xff);
 
         return 0;
+    }
+
+    public static DatagramPacket createPacketToReSend(String CommandType, String argumentWithTheCommand, DatagramPacket packet) throws IOException {
+        byte[] message ;
+        List<String> messageToSendToNeighbour = new ArrayList<String>();
+        messageToSendToNeighbour.add(CommandType);
+        messageToSendToNeighbour.add(argumentWithTheCommand);
+        message = getByteFromString(";",messageToSendToNeighbour);
+        packet.setData(message,0,message.length);
+        return packet;
     }
 
     public static byte[] getByteFromString(String delimiter, List<String> argumentsFromEvent) throws IOException {
