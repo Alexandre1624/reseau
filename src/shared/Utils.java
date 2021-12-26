@@ -49,7 +49,7 @@ public class Utils {
     }
 
     public static byte[] getByteFromString(String delimiter, List<String> argumentsFromEvent) throws IOException {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         for (String arg : argumentsFromEvent) {
             int command = CommandEncrypted.valueOfCommand(arg);
             if (command != 0) {

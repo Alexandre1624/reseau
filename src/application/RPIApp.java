@@ -90,16 +90,15 @@ public class RPIApp extends Thread{
         socket.receive(packet);
         RPIApp rpiSource = this.findNeigbor(packet.getAddress(), packet.getPort());
 
-        //System.out.println("receive "+ new String (packet.getData()));\
         String [] commandReceived = Utils.splitDataIntoArguments(new String (packet.getData()));
-        CommandDecrypted commandeDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) != null ? CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) : null;
-        int bestDistanceNew = Integer.valueOf(commandReceived[1]) + 1;
-        System.out.println("distance=" + bestDistanceNew);
+        CommandDecrypted commandDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) != null ? CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) : null;
+
         byte[] message = new byte[0];
-        switch (commandeDecrypted) {
+        switch (commandDecrypted) {
             case advertise:
                 log.info("receive distance");
-
+                int bestDistanceNew = Integer.valueOf(commandReceived[1]) + 1;
+                System.out.println("distance=" + bestDistanceNew);
                 // On recherche le bestReceiver (ca devrait etre sender) ainsi que la bestDistance
                 if (this.bestReceiver == null) this.bestReceiver = rpiSource; 
                 if (bestDistanceNew < this.bestDistance) {
@@ -114,8 +113,8 @@ public class RPIApp extends Thread{
                 message = Utils.getByteFromString(";",messageToSendToNeighboor);
                 packet.setData(message);
                 break;
-            case state:
-                log.info("receive state");
+            case vanne:
+                log.info("receive vanne");
                 break;
 
         }
