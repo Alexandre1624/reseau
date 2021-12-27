@@ -1,5 +1,6 @@
 package application;
 
+import config.InjectionProperties;
 import models.Event;
 import models.FileFormatException;
 import models.Link;
@@ -19,6 +20,7 @@ public class Terminal {
        this.parserConfig = new ParserConfig(filePath);
     }
     public void run() throws InterruptedException, IOException {
+
         this.initApps(this.parserConfig.getNodes(), this.parserConfig.getLinks(), this.parserConfig.getEvents());
     }
     private void initApps(List<Node> nodes, List<Link> links, List<Event> events) throws InterruptedException, IOException {
@@ -26,10 +28,13 @@ public class Terminal {
          * Creation of the RootDevice (id==1) and others RPIApps
          * more legibility with stream java
          */
+        InjectionProperties injectionProperties = new InjectionProperties();
+        Properties delayRPIApp = injectionProperties.getProperties().get("RPIApp.properties");
+        int delay = Integer.valueOf(delayRPIApp.getProperty("delay"));
         this.events = events;
         devices = nodes.stream().collect(Collectors.toMap(node -> node.id, node -> {
             try {
-                return node.id ==1 ? new RootDevice(node): new RPIApp(node);
+                return node.id ==1 ? new RootDevice(node): new RPIApp(node, delay);
             } catch (SocketException e) {
                 e.printStackTrace();
             }

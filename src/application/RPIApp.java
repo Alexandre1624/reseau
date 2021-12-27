@@ -9,8 +9,10 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.logging.Logger;
 
 public class RPIApp extends Thread{
@@ -20,8 +22,12 @@ public class RPIApp extends Thread{
     protected List<RPIApp> neighbors = new ArrayList();
     private RPIApp bestReceiver = null;
     protected int bestDistance = Integer.MAX_VALUE;
-    private int vannePosition;
-    private int temperature = 15;
+    private static double maxTemperature = 20;
+    private static double minTemperature = 10;
+    private int vannePosition = 0;
+    private DecimalFormat df = new DecimalFormat("#.00");
+    private double temperature = Double.valueOf(df.format(Math.random()*(maxTemperature-minTemperature+1)+minTemperature));
+    private int delay;
     
     protected Logger log;
     protected DatagramSocket socket;
@@ -31,12 +37,14 @@ public class RPIApp extends Thread{
     /**
      * Constructor of the class
      * @param Node node
+     * @param delay
      */
-    public RPIApp(Node node) {
+    public RPIApp(Node node, int delay) {
         this.idNode = node.id;
         this.address = node.address;
         this.port = node.port;
-
+        this.delay = delay;
+        System.out.println("temperature" + temperature);
         log = Logger.getLogger(this.getClass().getSimpleName() + " " +  this.idNode);
     }
 

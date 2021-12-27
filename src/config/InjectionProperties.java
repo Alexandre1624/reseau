@@ -5,9 +5,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.SQLOutput;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 public class InjectionProperties {
     private static Map<String, Properties> properties = new HashMap<>();
@@ -23,10 +25,12 @@ public class InjectionProperties {
                         try (FileInputStream file = new FileInputStream(fileName)) {
                             Properties prop = new Properties();
                             prop.load(file);
-                            System.out.println(fileName);
-                            properties.put(fileName, prop);
+                            fileName = fileName.replace("\\","/");
+                            String[] fileNameSplited = fileName.split("/");
+
+                            properties.put(fileNameSplited[fileNameSplited.length-1], prop);
                         } catch (Exception exception) {
-                            System.out.println("Injection properties a cesser de fonctioner");
+                            System.out.println("Injection properties a cesser de fonctionner");
                             exception.printStackTrace();
                             throw new RuntimeException();
                         }

@@ -7,7 +7,6 @@ import shared.Utils;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.SocketException;
-import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 
 public class RootDevice extends RPIApp {
@@ -17,7 +16,7 @@ public class RootDevice extends RPIApp {
      * @param Node node
      */
     public RootDevice(Node node) throws SocketException {
-        super(node);
+        super(node,0);
         super.bestDistance = 0;
         log = Logger.getLogger(this.getClass().getSimpleName() + " " + this.idNode);
     }
