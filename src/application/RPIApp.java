@@ -5,10 +5,7 @@ import models.CommandDecrypted;
 import models.Node;
 import shared.Utils;
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
+import java.net.*;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,10 +60,22 @@ public class RPIApp extends Thread{
         try {
             this.socket = new DatagramSocket(port);
             log.info( Utils.logInfo(this.idNode)+"start");
-            this.onReceiveMessage();
+            long time = System.currentTimeMillis();
+            this.socket.setSoTimeout(5000);
+            while(true) {
+
+                long d = System.currentTimeMillis();
+                if (d > time + delay) {
+                    log.info( Utils.logInfo(this.idNode)+ temperature + "temperature" + vannePosition);
+                    time = System.currentTimeMillis();
+                }
+                this.onReceiveMessage();
+            }
             
         } catch (SocketException e) {
             e.printStackTrace();
+
+        } catch (SocketTimeoutException e) {
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -81,7 +90,8 @@ public class RPIApp extends Thread{
      * @throws IOException
      */
     protected void flooding(DatagramPacket packet) throws IOException {
-
+        // LA BOUCLE DEVENEMENT NE MARCHE PAS pcq c'est un circuit et nous envoyonns connstament des informations a nos voisins ce qui fait que le floading nne finira jamais.
+        // il faut faire enn sorte de ne pas renvoye constament au voisins.
         for(RPIApp rpi: this.neighbors) {
             // On renvoie le paquet à tous les voisins excepté à la source
             if ((rpi.getAddress() != packet.getAddress()) && (rpi.getPort() != packet.getPort())) {
@@ -103,8 +113,7 @@ public class RPIApp extends Thread{
         RPIApp rpiSource = this.findNeighbour(packet.getAddress(), packet.getPort());
         String [] commandReceived = Utils.splitDataIntoArguments(new String (packet.getData(), 0, packet.getLength()));
         CommandDecrypted commandDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode());
-
-
+        System.out.println(commandReceived);
         switch (commandDecrypted) {
             case advertise:
                 log.info("receive distance");
@@ -118,7 +127,6 @@ public class RPIApp extends Thread{
                 } else if (bestDistanceNew == this.bestDistance) {
                     if (rpiSource.getIdNode() < this.bestReceiver.getIdNode()) this.bestReceiver = rpiSource;
                 }
-
                 packet = Utils.createPacketToReSend("advertise",String.valueOf(this.bestDistance),packet);
                 break;
             case vanne:
@@ -126,8 +134,8 @@ public class RPIApp extends Thread{
                 break;
 
         }
-
         this.flooding(packet);
+
 
     }
 
