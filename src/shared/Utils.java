@@ -41,7 +41,7 @@ public class Utils {
     }
 
     public static DatagramPacket createPacketToReSend(String CommandType, String argumentWithTheCommand, DatagramPacket packet) throws IOException {
-        byte[] message ;
+        byte[] message;
         List<String> messageToSendToNeighbour = new ArrayList<String>();
         messageToSendToNeighbour.add(CommandType);
         messageToSendToNeighbour.add(argumentWithTheCommand);

@@ -5,7 +5,10 @@ import models.CommandDecrypted;
 import models.Node;
 import shared.Utils;
 import java.io.IOException;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -15,8 +18,10 @@ public class RPIApp extends Thread{
     protected InetAddress address;
     protected int port;
     protected List<RPIApp> neighbors = new ArrayList();
-    protected RPIApp bestReceiver = null;
-    protected int bestDistance = 9999;
+    private RPIApp bestReceiver = null;
+    protected int bestDistance = Integer.MAX_VALUE;
+    private int vannePosition;
+    private int temperature = 15;
     
     protected Logger log;
     protected DatagramSocket socket;
@@ -86,12 +91,12 @@ public class RPIApp extends Thread{
     private void onReceiveMessage() throws IOException {
         DatagramPacket packet = new DatagramPacket(new byte[MAX_DGRAM_SIZE], MAX_DGRAM_SIZE);
         socket.receive(packet);
+
         RPIApp rpiSource = this.findNeighbour(packet.getAddress(), packet.getPort());
-
         String [] commandReceived = Utils.splitDataIntoArguments(new String (packet.getData(), 0, packet.getLength()));
-        CommandDecrypted commandDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) != null ? CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode()) : null;
+        CommandDecrypted commandDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode());
 
-        byte[] message = new byte[0];
+
         switch (commandDecrypted) {
             case advertise:
                 log.info("receive distance");
@@ -120,14 +125,6 @@ public class RPIApp extends Thread{
 
     private String[] splitDataIntoArguments(String packet) {
         return packet.split(";");
-    }
-
-    protected void sendPacketDistance() {
-
-    }
-
-    protected void receivePacketDistance() {
-
     }
 
     public void createThread() {
