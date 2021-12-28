@@ -17,7 +17,7 @@ public class RPIApp extends Thread{
     protected InetAddress address;
     protected int port;
     protected List<RPIApp> neighbors = new ArrayList();
-    private RPIApp bestReceiver = null;
+    private RPIApp bestSender = null;
     protected int bestDistance = Integer.MAX_VALUE;
     private static double maxTemperature = 20;
     private static double minTemperature = 10;
@@ -123,13 +123,13 @@ public class RPIApp extends Thread{
                 //log.info("receive distance");
                 int bestDistanceNew = Integer.valueOf(commandReceived[1]) + 1;
                 //System.out.println("distance=" + bestDistanceNew);
-                // On recherche le bestReceiver (ca devrait etre sender) ainsi que la bestDistance
-                if (this.bestReceiver == null) this.bestReceiver = rpiSource;
+                // On recherche le bestSender (ca devrait etre sender) ainsi que la bestDistance
+                if (this.bestSender == null) this.bestSender = rpiSource;
                 if (bestDistanceNew < this.bestDistance) {
                     this.bestDistance = bestDistanceNew;
-                    this.bestReceiver = rpiSource;
+                    this.bestSender = rpiSource;
                 } else if (bestDistanceNew == this.bestDistance) {
-                    if (this.bestReceiver != null && rpiSource.getIdNode() < this.bestReceiver.getIdNode()) this.bestReceiver = rpiSource;
+                    if (this.bestSender != null && rpiSource.getIdNode() < this.bestSender.getIdNode()) this.bestSender = rpiSource;
                 }
                 packet = Utils.createPacketToReSend("advertise",String.valueOf(this.bestDistance),packet);
                 break;
@@ -206,8 +206,8 @@ public class RPIApp extends Thread{
     public List<RPIApp> getNeighbors() {
         return neighbors;
     }
-    public RPIApp getBestReceiver() {
-        return bestReceiver;
+    public RPIApp getbestSender() {
+        return bestSender;
     }
     public int getBestDistance() {
         return bestDistance;
@@ -226,8 +226,8 @@ public class RPIApp extends Thread{
     public void setNeighbors(List<RPIApp> neighbors) {
         this.neighbors = neighbors;
     }
-    public void setBestReceiver(RPIApp bestReceiver) {
-        this.bestReceiver = bestReceiver;
+    public void setbestSender(RPIApp bestSender) {
+        this.bestSender = bestSender;
     }
     public final void setBestDistance(int bestDistance) {
         this.bestDistance = bestDistance;
