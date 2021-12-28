@@ -50,22 +50,30 @@ public class RootDevice extends RPIApp {
 
     public void sendMessage(Event event) throws InterruptedException, IOException {
         //Utils.logInfo(this.idNode);
+        byte[] message;
         sleep(event.delay);
         switch (event.args.get(0)) {
             case "advertise":
                 log.info("advertise");
                 event.args.add("0");
-                byte[] message = Utils.getByteFromString(";", event.args);
-                for(RPIApp rpi: this.neighbors) {
-                    DatagramPacket sendPacket = new DatagramPacket(message,message.length, rpi.getAddress(), rpi.getPort());
-                    socket.send(sendPacket);
-                    System.out.println(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
-                }
+                message = Utils.getByteFromString(";", event.args);
+                sendPacket(message);
                 break;
             case "vanne":
+                log.info("vanne");
+                message = Utils.getByteFromString(";", event.args);
+                sendPacket(message);
                 break;
             default:
                 break;
+        }
+    }
+
+    private void sendPacket(byte[] message) throws IOException {
+        for(RPIApp rpi: this.neighbors) {
+            DatagramPacket sendPacket = new DatagramPacket(message,message.length, rpi.getAddress(), rpi.getPort());
+            socket.send(sendPacket);
+            System.out.println(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
         }
     }
 }

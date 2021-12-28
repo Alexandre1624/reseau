@@ -65,7 +65,7 @@ public class RPIApp extends Thread{
             while(true) {
 
                 long d = System.currentTimeMillis();
-                if (d > time + delay) {
+                if (delay != 0 && d > time + delay) {
                     log.info( Utils.logInfo(this.idNode)+ temperature + "temperature" + vannePosition);
                     time = System.currentTimeMillis();
                 }
@@ -89,20 +89,22 @@ public class RPIApp extends Thread{
      * @param packet
      * @throws IOException
      */
-    protected void flooding(DatagramPacket packet) throws IOException {
+    protected void flooding(DatagramPacket packet, boolean toBeTreated) throws IOException {
         // LA BOUCLE DEVENEMENT NE MARCHE PAS pcq c'est un circuit et nous envoyonns connstament des informations a nos voisins ce qui fait que le floading nne finira jamais.
         // il faut faire enn sorte de ne pas renvoye constament au voisins.
-        for(RPIApp rpi: this.neighbors) {
-            // On renvoie le paquet à tous les voisins excepté à la source
-            if ((rpi.getAddress() != packet.getAddress()) && (rpi.getPort() != packet.getPort())) {
-                System.out.println(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
+        if (toBeTreated) {
+            for (RPIApp rpi : this.neighbors) {
+                // On renvoie le paquet à tous les voisins excepté à la source
+                if ((rpi.getAddress() != packet.getAddress()) && (rpi.getPort() != packet.getPort())) {
+                  //  System.out.println(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
 
-                packet.setAddress(rpi.getAddress());
-                packet.setPort(rpi.getPort());
-                this.socket.send(packet);
+                    packet.setAddress(rpi.getAddress());
+                    packet.setPort(rpi.getPort());
+                    this.socket.send(packet);
+
+                }
 
             }
-            
         }
     }
 
@@ -113,30 +115,44 @@ public class RPIApp extends Thread{
         RPIApp rpiSource = this.findNeighbour(packet.getAddress(), packet.getPort());
         String [] commandReceived = Utils.splitDataIntoArguments(new String (packet.getData(), 0, packet.getLength()));
         CommandDecrypted commandDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode());
-        System.out.println(commandReceived);
+        boolean toBeTreated = true;
+
         switch (commandDecrypted) {
             case advertise:
-                log.info("receive distance");
+
+                //log.info("receive distance");
                 int bestDistanceNew = Integer.valueOf(commandReceived[1]) + 1;
-                System.out.println("distance=" + bestDistanceNew);
+                //System.out.println("distance=" + bestDistanceNew);
                 // On recherche le bestReceiver (ca devrait etre sender) ainsi que la bestDistance
-                if (this.bestReceiver == null) this.bestReceiver = rpiSource; 
+                if (this.bestReceiver == null) this.bestReceiver = rpiSource;
                 if (bestDistanceNew < this.bestDistance) {
                     this.bestDistance = bestDistanceNew;
                     this.bestReceiver = rpiSource;
                 } else if (bestDistanceNew == this.bestDistance) {
-                    if (rpiSource.getIdNode() < this.bestReceiver.getIdNode()) this.bestReceiver = rpiSource;
+                    if (this.bestReceiver != null && rpiSource.getIdNode() < this.bestReceiver.getIdNode()) this.bestReceiver = rpiSource;
                 }
                 packet = Utils.createPacketToReSend("advertise",String.valueOf(this.bestDistance),packet);
                 break;
             case vanne:
                 log.info("receive vanne");
+                int nodeId = Integer.valueOf(commandReceived[1]);
+                int vannePosition = Integer.valueOf(commandReceived[2]);
+                if (nodeId == this.idNode) {
+                    this.vannePosition = vannePosition;
+                    this.temperature = this.temperatureGiven();
+                    log.info("position of vanne changed "+ vannePosition );
+                }
+                toBeTreated = false;
                 break;
 
         }
-        this.flooding(packet);
+        this.flooding(packet, toBeTreated);
 
 
+    }
+
+    public Double temperatureGiven() {
+        return Double.valueOf(df.format((Math.random() * (maxTemperature-minTemperature+1)+minTemperature) * (1 + (this.vannePosition * 0.15))));
     }
 
     private String[] splitDataIntoArguments(String packet) {
