@@ -1,9 +1,15 @@
 package shared;
 
+import models.CommandEncrypted;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.DatagramPacket;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Utils {
-
+    public static int portBase = 4444;
     public static byte[] Encode(String message, ArrayList<Integer> Nodes) {
         return null;
     }
@@ -33,13 +39,40 @@ public class Utils {
 
         return result;
     }
-    public static int bytesToInt(byte[] b) {
-        if (b.length == 4)
-            return b[0] << 24 | (b[1] & 0xff) << 16 | (b[2] & 0xff) << 8
-                    | (b[3] & 0xff);
-        else if (b.length == 2)
-            return 0x00 << 24 | 0x00 << 16 | (b[0] & 0xff) << 8 | (b[1] & 0xff);
 
-        return 0;
+    public static DatagramPacket createPacketToReSend(String CommandType, String argumentWithTheCommand, DatagramPacket packet) throws IOException {
+        byte[] message;
+        List<String> messageToSendToNeighbour = new ArrayList<String>();
+        messageToSendToNeighbour.add(CommandType);
+        messageToSendToNeighbour.add(argumentWithTheCommand);
+        message = getByteFromString(";",messageToSendToNeighbour);
+        packet.setData(message,0,message.length);
+        return packet;
+    }
+
+    public static byte[] getByteFromString(String delimiter, List<String> argumentsFromEvent) throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        for (String arg : argumentsFromEvent) {
+            int command = CommandEncrypted.valueOfCommand(arg);
+            if (command != 0) {
+                outputStream.write(intToBytes(command));
+            } else {
+                outputStream.write(arg.getBytes());
+            }
+            outputStream.write(delimiter.getBytes());
+        }
+        return  outputStream.toByteArray();
+    }
+
+    public static String[] splitDataIntoArguments(String packet) {
+        return packet.split(";");
+    }
+
+    public long getTimeToSendCommand(String time) {
+        return Long.valueOf(time) + System.currentTimeMillis();
+    }
+
+    public static String logInfo(int node) {
+        return System.currentTimeMillis()+";"+node+";";
     }
 }

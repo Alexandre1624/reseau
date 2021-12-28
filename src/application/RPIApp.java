@@ -1,10 +1,15 @@
 package application;
 
-import models.Node;
 
-import java.net.InetAddress;
+import models.CommandDecrypted;
+import models.Node;
+import shared.Utils;
+import java.io.IOException;
+import java.net.*;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.logging.Logger;
 
 public class RPIApp extends Thread{
@@ -12,19 +17,31 @@ public class RPIApp extends Thread{
     protected InetAddress address;
     protected int port;
     protected List<RPIApp> neighbors = new ArrayList();
-    protected RPIApp bestReceiver = null;
-    protected int bestDistance = 0;
-    private UDPManager udpManager = null;
+    private RPIApp bestSender = null;
+    protected int bestDistance = Integer.MAX_VALUE;
+    private static double maxTemperature = 20;
+    private static double minTemperature = 10;
+    private int vannePosition = 0;
+    private DecimalFormat df = new DecimalFormat("#.00");
+    private double temperature = Double.valueOf(df.format(Math.random()*(maxTemperature-minTemperature+1)+minTemperature));
+    private int delay;
+    
     protected Logger log;
+    protected DatagramSocket socket;
+    // taille maximale d'un datagramme, utilisée pour le buffer de reception
+    static int MAX_DGRAM_SIZE = 100;
 
     /**
      * Constructor of the class
      * @param Node node
+     * @param delay
      */
-    public RPIApp(Node node) {
+    public RPIApp(Node node, int delay) {
         this.idNode = node.id;
         this.address = node.address;
         this.port = node.port;
+        this.delay = delay;
+        System.out.println("temperature" + temperature);
         log = Logger.getLogger(this.getClass().getSimpleName() + " " +  this.idNode);
     }
 
@@ -39,7 +56,111 @@ public class RPIApp extends Thread{
     }
 
     public void run() {// method from thread
-        log.info(log.getName()+ ": I am running");
+        System.out.println(this.getClass().getSimpleName() + port);
+        try {
+            this.socket = new DatagramSocket(port);
+            log.info( Utils.logInfo(this.idNode)+"start");
+            long time = System.currentTimeMillis();
+            this.socket.setSoTimeout(5000);
+            while(true) {
+
+                long d = System.currentTimeMillis();
+                if (delay != 0 && d > time + delay) {
+                    log.info( Utils.logInfo(this.idNode)+ temperature + "temperature" + vannePosition);
+                    time = System.currentTimeMillis();
+                }
+                this.onReceiveMessage();
+            }
+            
+        } catch (SocketException e) {
+            e.printStackTrace();
+
+        } catch (SocketTimeoutException e) {
+
+        } catch (IOException e) {
+            e.printStackTrace();
+
+        }
+
+    }
+
+    /**
+     * 
+     * @param packet
+     * @throws IOException
+     */
+    protected void flooding(DatagramPacket packet, boolean toBeTreated) throws IOException {
+        // LA BOUCLE DEVENEMENT NE MARCHE PAS pcq c'est un circuit et nous envoyonns connstament des informations a nos voisins ce qui fait que le floading nne finira jamais.
+        // il faut faire enn sorte de ne pas renvoye constament au voisins.
+        if (toBeTreated) {
+            for (RPIApp rpi : this.neighbors) {
+                // On renvoie le paquet à tous les voisins excepté à la source
+                if ((rpi.getAddress() != packet.getAddress()) && (rpi.getPort() != packet.getPort())) {
+                  //  System.out.println(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
+
+                    packet.setAddress(rpi.getAddress());
+                    packet.setPort(rpi.getPort());
+                    this.socket.send(packet);
+
+                }
+
+            }
+        }
+    }
+
+    private void onReceiveMessage() throws IOException {
+        DatagramPacket packet = new DatagramPacket(new byte[MAX_DGRAM_SIZE], MAX_DGRAM_SIZE);
+        socket.receive(packet);
+
+        RPIApp rpiSource = this.findNeighbour(packet.getAddress(), packet.getPort());
+        String [] commandReceived = Utils.splitDataIntoArguments(new String (packet.getData(), 0, packet.getLength()));
+        CommandDecrypted commandDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode());
+        boolean toBeTreated = true;
+
+        switch (commandDecrypted) {
+            case advertise:
+
+                //log.info("receive distance");
+                int bestDistanceNew = Integer.valueOf(commandReceived[1]) + 1;
+                //System.out.println("distance=" + bestDistanceNew);
+                // On recherche le bestSender (ca devrait etre sender) ainsi que la bestDistance
+                if (this.bestSender == null) this.bestSender = rpiSource;
+                if (bestDistanceNew < this.bestDistance) {
+                    this.bestDistance = bestDistanceNew;
+                    this.bestSender = rpiSource;
+                } else if (bestDistanceNew == this.bestDistance) {
+                    if (this.bestSender != null && rpiSource.getIdNode() < this.bestSender.getIdNode()) this.bestSender = rpiSource;
+                }
+                packet = Utils.createPacketToReSend("advertise",String.valueOf(this.bestDistance),packet);
+                break;
+            case vanne:
+                log.info("receive vanne");
+                int nodeId = Integer.valueOf(commandReceived[1]);
+                int vannePosition = Integer.valueOf(commandReceived[2]);
+                if (nodeId == this.idNode) {
+                    this.vannePosition = vannePosition;
+                    this.temperature = this.temperatureGiven();
+                    log.info("position of vanne changed "+ vannePosition );
+                }
+                toBeTreated = false;
+                break;
+
+        }
+        this.flooding(packet, toBeTreated);
+
+
+    }
+
+    public Double temperatureGiven() {
+        return Double.valueOf(df.format((Math.random() * (maxTemperature-minTemperature+1)+minTemperature) * (1 + (this.vannePosition * 0.15))));
+    }
+
+    private String[] splitDataIntoArguments(String packet) {
+        return packet.split(";");
+    }
+
+    public void createThread() {
+        this.start();
     }
 
     /**
@@ -59,6 +180,19 @@ public class RPIApp extends Thread{
         this.neighbors.remove(rPIApp);
     }
 
+    /**
+     * Find RPIApp neighbor by address and port
+     * @param InetAddress address
+     * @param int port
+     * @return RPIApp
+     */
+    public RPIApp findNeighbour(InetAddress address, int port) {
+        for(RPIApp rpi: this.neighbors) {
+            if ((rpi.getAddress() != address) && (rpi.getPort() != port)) return rpi;
+        }
+        return null;
+    }
+
     // GETTERS //
     public int getIdNode() {
         return idNode;
@@ -72,8 +206,8 @@ public class RPIApp extends Thread{
     public List<RPIApp> getNeighbors() {
         return neighbors;
     }
-    public RPIApp getBestReceiver() {
-        return bestReceiver;
+    public RPIApp getbestSender() {
+        return bestSender;
     }
     public int getBestDistance() {
         return bestDistance;
@@ -92,21 +226,10 @@ public class RPIApp extends Thread{
     public void setNeighbors(List<RPIApp> neighbors) {
         this.neighbors = neighbors;
     }
-    public void setBestReceiver(RPIApp bestReceiver) {
-        this.bestReceiver = bestReceiver;
+    public void setbestSender(RPIApp bestSender) {
+        this.bestSender = bestSender;
     }
     public final void setBestDistance(int bestDistance) {
         this.bestDistance = bestDistance;
     }
-
-    protected void sendPacketDistance() {
-
-    }
-
-    protected void receivePacketDistance() {
-
-    }
-
-
-
 }

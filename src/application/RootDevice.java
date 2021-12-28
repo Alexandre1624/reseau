@@ -1,20 +1,22 @@
 package application;
 
+import models.Event;
 import models.Node;
+import shared.Utils;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.util.List;
+import java.net.SocketException;
 import java.util.logging.Logger;
 
-public class RootDevice extends RPIApp{
+public class RootDevice extends RPIApp {
 
     /**
      * Constructor of the class
      * @param Node node
      */
-    public RootDevice(Node node) {
-        super(node);
+    public RootDevice(Node node) throws SocketException {
+        super(node,0);
         super.bestDistance = 0;
         log = Logger.getLogger(this.getClass().getSimpleName() + " " + this.idNode);
     }
@@ -38,10 +40,40 @@ public class RootDevice extends RPIApp{
     public void openValve(int idNode, int level) {
 
     }
+
     public void openValve(RPIApp rpiApp, int level) {
         int idNode = rpiApp.getIdNode();
     }
     public void closeValve(int idNode) {
         openValve(idNode, 0);
+    }
+
+    public void sendMessage(Event event) throws InterruptedException, IOException {
+        //Utils.logInfo(this.idNode);
+        byte[] message;
+        sleep(event.delay);
+        switch (event.args.get(0)) {
+            case "advertise":
+                log.info("advertise");
+                event.args.add("0");
+                message = Utils.getByteFromString(";", event.args);
+                sendPacket(message);
+                break;
+            case "vanne":
+                log.info("vanne");
+                message = Utils.getByteFromString(";", event.args);
+                sendPacket(message);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void sendPacket(byte[] message) throws IOException {
+        for(RPIApp rpi: this.neighbors) {
+            DatagramPacket sendPacket = new DatagramPacket(message,message.length, rpi.getAddress(), rpi.getPort());
+            socket.send(sendPacket);
+            System.out.println(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
+        }
     }
 }
