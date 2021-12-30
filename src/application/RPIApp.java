@@ -34,9 +34,9 @@ public class RPIApp extends Thread{
     protected static Logger log = Logger.getLogger(RPIApp.class.getName());
     static {
         try {
+            log.setUseParentHandlers(false);
             FileHandler fh = new FileHandler("log.txt");
-            log.addHandler(fh);
-            
+            log.addHandler(fh); 
         } catch (SecurityException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -91,12 +91,15 @@ public class RPIApp extends Thread{
             }
             
         } catch (SocketException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+            log.warning(e.getMessage());
         } catch (SocketTimeoutException e) {
             // TODO ou pas, j'ai commenté pour éviter d'avoir l'exception "java.net.SocketTimeoutException: Receive timed out" qui est déclenchée à la fin pour chaque Thread
             //e.printStackTrace();
+            log.warning(e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+            log.warning(e.getMessage());
         }
 
     }
