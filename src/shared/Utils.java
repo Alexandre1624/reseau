@@ -5,6 +5,7 @@ import models.CommandEncrypted;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,14 +41,16 @@ public class Utils {
         return result;
     }
 
-    public static DatagramPacket createPacketToReSend(String CommandType, String argumentWithTheCommand, DatagramPacket packet) throws IOException {
+    public static ByteBuffer createPacketToReSend(String CommandType, String argumentWithTheCommand, ByteBuffer buffer) throws IOException {
+        buffer.clear();
         byte[] message;
         List<String> messageToSendToNeighbour = new ArrayList<String>();
         messageToSendToNeighbour.add(CommandType);
         messageToSendToNeighbour.add(argumentWithTheCommand);
         message = getByteFromString(";",messageToSendToNeighbour);
-        packet.setData(message,0,message.length);
-        return packet;
+        buffer.put(message,0,message.length);
+        buffer.flip();
+        return buffer;
     }
 
     public static byte[] getByteFromString(String delimiter, List<String> argumentsFromEvent) throws IOException {

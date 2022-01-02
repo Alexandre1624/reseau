@@ -6,10 +6,10 @@ import models.Node;
 import shared.Utils;
 import java.io.IOException;
 import java.net.*;
-import java.text.DecimalFormat;
+import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 
@@ -25,6 +25,7 @@ public class RPIApp extends Thread{
     private int vannePosition = 0;
     private double temperature = Double.valueOf(Math.random()*(maxTemperature-minTemperature+1)+minTemperature);
     private int delay;
+    protected DatagramChannel channel;
     
     protected DatagramSocket socket;
     // taille maximale d'un datagramme, utilisée pour le buffer de reception
@@ -68,28 +69,26 @@ public class RPIApp extends Thread{
         for(RPIApp neighbor : neighbors){ temp.add(neighbor.idNode); }
         return String.format("[RPIApp id:#%d | address:%s | port:%d | neighbors:%s | bestSender:%d]"+System.lineSeparator(),idNode, address, port, temp.toString(), bestSender.getIdNode());
     }
-
-    public void run() {// method from thread
-        // LOG EVENT //
-        Utils.logEventStart(this.idNode);
+    public void bootSocket() throws IOException {
 
         try {
-            this.socket = new DatagramSocket(port);
-            
+            this.channel = DatagramChannel.open( );
+
+            SocketAddress address = new InetSocketAddress(this.address,this.port);
+            this.socket = channel.socket();//creer une channel permettant davoir un socket non bloquant--
+            this.socket.bind(address);
+            this.socket.getChannel().configureBlocking(false);
             long time = System.currentTimeMillis();
-            this.socket.setSoTimeout(5000);
             while(true) {
                 // TODO, il faut envoyer un paquet à RootDevice pour qu'il le recoive l'info des états de chaque RPI
                 long d = System.currentTimeMillis();
+
                 if (delay != 0 && d > time + delay) {
                     // LOG EVENT //
                     Utils.logEventSendState(this.idNode, this.temperature, this.vannePosition);
-                    
-                    time = System.currentTimeMillis();
                 }
                 this.onReceiveMessage();
             }
-            
         } catch (SocketException e) {
             //e.printStackTrace();
             log.warning(e.getMessage());
@@ -100,107 +99,122 @@ public class RPIApp extends Thread{
         } catch (IOException e) {
             //e.printStackTrace();
             log.warning(e.getMessage());
+        } finally {
+            System.out.println("thread die");
         }
+    }
+    public void run() {// method from thread
+        // LOG EVENT //
+        Utils.logEventStart(this.idNode);
+        try {
+            this.bootSocket();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
 
     }
 
     /**
      * Method to flood packet to neigboors of RPI (except source of this packet)
      * @param packet
+     * @param s
      * @throws IOException
      */
-    protected void flooding(DatagramPacket packet) throws IOException {
+    protected void flooding(ByteBuffer buffer, InetSocketAddress s) throws IOException {
         for (RPIApp rpi : this.neighbors) {
             // On renvoie le paquet à tous les voisins excepté à la source
-            if (!(rpi.getAddress().equals(packet.getAddress())) || (rpi.getPort() != packet.getPort())) {
+            if (!(rpi.getAddress().equals(s.getAddress())) || (rpi.getPort() != s.getPort())) {
                 // DEBUG //
-                //log.info(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
-
-                packet.setAddress(rpi.getAddress());
-                packet.setPort(rpi.getPort());
-                this.socket.send(packet);
-
+                //System.out.println(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
+                buffer.rewind();
+                this.channel.send(buffer,new InetSocketAddress(rpi.getAddress(),rpi.getPort()));
             }
 
         }
     }
 
     private void onReceiveMessage() throws IOException {
-        DatagramPacket packet = new DatagramPacket(new byte[MAX_DGRAM_SIZE], MAX_DGRAM_SIZE);
-        socket.receive(packet);
+        ByteBuffer buffer = ByteBuffer.allocate(MAX_DGRAM_SIZE);
+        InetSocketAddress s = (InetSocketAddress) this.channel.receive(buffer);
+        buffer.flip();
+        String[] commandReceived = Utils.splitDataIntoArguments(new String(buffer.array()));
+        if (commandReceived.length > 1) {
 
-        RPIApp rpiSource = this.findNeighbor(packet.getAddress(), packet.getPort());
-        String [] commandReceived = Utils.splitDataIntoArguments(new String (packet.getData(), 0, packet.getLength()));
-        CommandDecrypted commandDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode());
-        boolean toBeResend = false;
+            RPIApp rpiSource = this.findNeighbor(s.getAddress(), s.getPort());
+            buffer.rewind();// le buffer commence a la position zero
 
-        switch (commandDecrypted) {
-            case advertise:
-                int distanceReceived = Integer.valueOf(commandReceived[1]);
+            CommandDecrypted commandDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode());
+            boolean toBeResend = false;
 
-                // LOG EVENT
-                Utils.logEventReceivedDistance(this.idNode, distanceReceived, rpiSource.getIdNode());
-                //System.out.println(rpiSource);
+            switch (commandDecrypted) {
+                case advertise:
+                    int distanceReceived = Integer.valueOf(commandReceived[1]);
 
-                // On recherche le bestSender ainsi que la bestDistance
-                int bestDistanceNew = distanceReceived + 1;
-                if (this.bestSender == null) this.bestSender = rpiSource;
-                if (bestDistanceNew < this.bestDistance) {
-                    toBeResend = true;
-                    this.bestDistance = bestDistanceNew;
-                    this.bestSender = rpiSource;
+                    // LOG EVENT
+                    Utils.logEventReceivedDistance(this.idNode, distanceReceived, rpiSource.getIdNode());
+                    //System.out.println(rpiSource);
 
-                    // LOG EVENT //
-                    Utils.logEventNewRoute(this.idNode, rpiSource.getIdNode());
-
-                } else if (bestDistanceNew == this.bestDistance) {
-                    if (this.bestSender != null && (rpiSource.getIdNode() < this.bestSender.getIdNode())) {
+                    // On recherche le bestSender ainsi que la bestDistance
+                    int bestDistanceNew = distanceReceived + 1;
+                    if (this.bestSender == null) this.bestSender = rpiSource;
+                    if (bestDistanceNew < this.bestDistance) {
                         toBeResend = true;
+                        this.bestDistance = bestDistanceNew;
                         this.bestSender = rpiSource;
 
                         // LOG EVENT //
                         Utils.logEventNewRoute(this.idNode, rpiSource.getIdNode());
 
+                    } else if (bestDistanceNew == this.bestDistance) {
+                        if (this.bestSender != null && (rpiSource.getIdNode() < this.bestSender.getIdNode())) {
+                            toBeResend = true;
+                            this.bestSender = rpiSource;
+
+                            // LOG EVENT //
+                            Utils.logEventNewRoute(this.idNode, rpiSource.getIdNode());
+
+                        }
                     }
-                }
-                // On vérifie si le paquet doit être réenvoyé
-                if (toBeResend) {
-                    // LOG EVENT
-                    Utils.logEventAdvertise(this.idNode, this.bestDistance);
+                    // On vérifie si le paquet doit être réenvoyé
+                    if (toBeResend) {
+                        // LOG EVENT
+                        Utils.logEventAdvertise(this.idNode, this.bestDistance);
 
-                    packet = Utils.createPacketToReSend("advertise",String.valueOf(this.bestDistance),packet);
-                    this.flooding(packet);
-
-                }
-
-                break;
-                
-            case vanne:
-                int nodeId = Integer.valueOf(commandReceived[1]);
-                int vannePosition = Integer.valueOf(commandReceived[2]);
-                if (nodeId == this.idNode) {
-                    toBeResend = false;
-
-                    // LOG EVENT
-                    Utils.logEventNewState(this.idNode, vannePosition, this.vannePosition);
-
-                    this.vannePosition = vannePosition;
-                    this.temperature = this.temperatureGiven();
-
-                } else {
-                    // Comme le RPI source est considéré comme le bestSender, on peut lancer le flooding
-                    if (rpiSource.equals(this.bestSender)) {
-                        toBeResend = true;
-
-                        // On retransmet le packet comme à l'origine car il contient toutes les infos nécessaires (sans besoin de modifs)
-                        this.flooding(packet);
+                        buffer = Utils.createPacketToReSend("advertise", String.valueOf(this.bestDistance), buffer);
+                        this.flooding(buffer, s);
 
                     }
 
-                }
-                
-                break;
+                    break;
 
+                case vanne:
+                    int nodeId = Integer.valueOf(commandReceived[1]);
+                    int vannePosition = Integer.valueOf(commandReceived[2]);
+                    if (nodeId == this.idNode) {
+                        toBeResend = false;
+
+                        // LOG EVENT
+                        Utils.logEventNewState(this.idNode, vannePosition, this.vannePosition);
+
+                        this.vannePosition = vannePosition;
+                        this.temperature = this.temperatureGiven();
+
+                    } else {
+                        // Comme le RPI source est considéré comme le bestSender, on peut lancer le flooding
+                        if (rpiSource.equals(this.bestSender)) {
+                            toBeResend = true;
+
+                            // On retransmet le packet comme à l'origine car il contient toutes les infos nécessaires (sans besoin de modifs)
+                            this.flooding(buffer, s);
+
+                        }
+
+                    }
+
+                    break;
+
+            }
         }
 
     }
