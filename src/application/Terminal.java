@@ -47,7 +47,7 @@ public class Terminal {
         for(Link link : links){
              devices.get(link.sourceId).addNeighbor(devices.get(link.destinationId));
         }
-        System.out.println(this.devices);
+        //System.out.println(this.devices);
         this.runApps();
     }
 

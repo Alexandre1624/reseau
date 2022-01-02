@@ -72,7 +72,36 @@ public class Utils {
         return Long.valueOf(time) + System.currentTimeMillis();
     }
 
-    public static String logInfo(int node) {
-        return System.currentTimeMillis()+";"+node+";";
+    // ********* //
+    // LOG EVENT //
+    // ********* //
+    public static String logEvent(int nodeId, String message) {
+        String logEvent = System.currentTimeMillis() + ";" + nodeId + ";" + message;
+        System.out.println(logEvent);
+        return logEvent;
+    }
+    public static String logEventStart(int nodeId) {
+        return Utils.logEvent(nodeId, "start");
+    }
+    public static String logEventAdvertise(int nodeId, int distance) {
+        return Utils.logEvent(nodeId, "advertise distance " + distance);
+    }
+    public static String logEventReceivedDistance(int nodeId, int distance, int nodeIdFrom) {
+        return Utils.logEvent(nodeId, "received distance " + distance + " from node " + nodeIdFrom);
+    }
+    public static String logEventNewRoute(int nodeId, int nodeIdFrom) {
+        return Utils.logEvent(nodeId, "new route via node " + nodeIdFrom);
+    }
+    public static String logEventSendState(int nodeId, double temperature, int state) {
+        return Utils.logEvent(nodeId, "send state;temperature is " + String.format("%.2f", temperature) + ";state is " + state);
+    }
+    public static String logEventReceivedState(int nodeId, int nodeIdFrom, double temperature, int state) {
+        return Utils.logEvent(nodeId, "received state from node " + nodeIdFrom + " ;temperature is " + String.format("%.2f", temperature) + ";state is " + state);
+    }
+    public static String logEventSetState(int nodeId, int state, int nodeIdTo) {
+        return Utils.logEvent(nodeId, "set state " + state + " to node " + nodeIdTo);
+    }
+    public static String logEventNewState(int nodeId, int newState, int oldState) {
+        return Utils.logEvent(nodeId, "new state " + newState + ";old state " + oldState);
     }
 }

@@ -7,7 +7,6 @@ import shared.Utils;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.SocketException;
-import java.util.logging.Logger;
 
 public class RootDevice extends RPIApp {
 
@@ -18,9 +17,8 @@ public class RootDevice extends RPIApp {
     public RootDevice(Node node) throws SocketException {
         super(node,0);
         super.bestDistance = 0;
-        log = Logger.getLogger(this.getClass().getSimpleName() + " " + this.idNode);
-    }
 
+    }
 
     /**
      * Overload toSTring() method
@@ -36,34 +34,31 @@ public class RootDevice extends RPIApp {
 
     }
 
-    // TODO
-    public void openValve(int idNode, int level) {
-
-    }
-
-    public void openValve(RPIApp rpiApp, int level) {
-        int idNode = rpiApp.getIdNode();
-    }
-    public void closeValve(int idNode) {
-        openValve(idNode, 0);
-    }
-
     public void sendMessage(Event event) throws InterruptedException, IOException {
         //Utils.logInfo(this.idNode);
         byte[] message;
         sleep(event.delay);
         switch (event.args.get(0)) {
             case "advertise":
-                log.info("advertise");
+                // LOG EVENT //
+                Utils.logEventAdvertise(1, 0);
+
                 event.args.add("0");
                 message = Utils.getByteFromString(";", event.args);
                 sendPacket(message);
                 break;
+
             case "vanne":
-                log.info("vanne");
+                int nodeIdDestination = Integer.valueOf(event.args.get(1));
+                int vannePosition = Integer.valueOf(event.args.get(2));
+
+                // LOG EVENT //
+                Utils.logEventSetState(1, vannePosition, nodeIdDestination);
+
                 message = Utils.getByteFromString(";", event.args);
                 sendPacket(message);
                 break;
+
             default:
                 break;
         }
@@ -73,7 +68,12 @@ public class RootDevice extends RPIApp {
         for(RPIApp rpi: this.neighbors) {
             DatagramPacket sendPacket = new DatagramPacket(message,message.length, rpi.getAddress(), rpi.getPort());
             socket.send(sendPacket);
-            System.out.println(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
+
+            // LOG //
+            //log.info(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
         }
     }
+
+    // TODO, il faudra un onReceive pour récupérer l'état des différents RPI
+    // et ainsi faire appel à Utils.logEventReceivedState(...)
 }
