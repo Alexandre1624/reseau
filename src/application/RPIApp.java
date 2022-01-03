@@ -102,7 +102,7 @@ public class RPIApp extends Thread{
             //e.printStackTrace();
             log.warning(e.getMessage());
         } finally {
-            System.out.println("thread die");
+            log.warning("thread interrupted");
         }
     }
     public void run() {// method from thread
