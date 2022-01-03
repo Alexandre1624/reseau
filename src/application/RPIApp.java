@@ -87,6 +87,8 @@ public class RPIApp extends Thread{
                     // LOG EVENT //
                     Utils.logEventSendState(this.idNode, this.temperature, this.vannePosition);
                 }
+
+                time = System.currentTimeMillis();
                 this.onReceiveMessage();
             }
         } catch (SocketException e) {
@@ -187,13 +189,10 @@ public class RPIApp extends Thread{
                     }
 
                     break;
-
                 case vanne:
                     int nodeId = Integer.valueOf(commandReceived[1]);
                     int vannePosition = Integer.valueOf(commandReceived[2]);
                     if (nodeId == this.idNode) {
-                        toBeResend = false;
-
                         // LOG EVENT
                         Utils.logEventNewState(this.idNode, vannePosition, this.vannePosition);
 
@@ -203,15 +202,12 @@ public class RPIApp extends Thread{
                     } else {
                         // Comme le RPI source est considéré comme le bestSender, on peut lancer le flooding
                         if (rpiSource.equals(this.bestSender)) {
-                            toBeResend = true;
-
                             // On retransmet le packet comme à l'origine car il contient toutes les infos nécessaires (sans besoin de modifs)
                             this.flooding(buffer, s);
 
                         }
 
                     }
-
                     break;
 
             }
