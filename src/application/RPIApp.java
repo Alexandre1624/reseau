@@ -7,11 +7,15 @@ import shared.Utils;
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.DatagramChannel;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class RPIApp extends Thread{
     protected int idNode;
@@ -69,16 +73,17 @@ public class RPIApp extends Thread{
         for(RPIApp neighbor : neighbors){ temp.add(neighbor.idNode); }
         return String.format("[RPIApp id:#%d | address:%s | port:%d | neighbors:%s | bestSender:%d]"+System.lineSeparator(),idNode, address, port, temp.toString(), bestSender.getIdNode());
     }
+
     public void bootSocket() throws IOException {
 
         try {
-            this.channel = DatagramChannel.open( );
-
+            this.channel = DatagramChannel.open();
             SocketAddress address = new InetSocketAddress(this.address,this.port);
             this.socket = channel.socket();//creer une channel permettant davoir un socket non bloquant--
             this.socket.bind(address);
             this.socket.getChannel().configureBlocking(false);
             long time = System.currentTimeMillis();
+            ByteBuffer buffer = ByteBuffer.allocate(MAX_DGRAM_SIZE);
             while(true) {
                 // TODO, il faut envoyer un paquet à RootDevice pour qu'il le recoive l'info des états de chaque RPI
                 long d = System.currentTimeMillis();
@@ -86,16 +91,13 @@ public class RPIApp extends Thread{
                 if (delay != 0 && d > time + delay) {
                     // LOG EVENT //
                     Utils.logEventSendState(this.idNode, this.temperature, this.vannePosition);
+                    time = System.currentTimeMillis();
+                    this.sendStateToRootDevice(buffer);
                 }
 
-                time = System.currentTimeMillis();
                 this.onReceiveMessage();
             }
         } catch (SocketException e) {
-            //e.printStackTrace();
-            log.warning(e.getMessage());
-        } catch (SocketTimeoutException e) {
-            // TODO ou pas, j'ai commenté pour éviter d'avoir l'exception "java.net.SocketTimeoutException: Receive timed out" qui est déclenchée à la fin pour chaque Thread
             //e.printStackTrace();
             log.warning(e.getMessage());
         } catch (IOException e) {
@@ -105,6 +107,7 @@ public class RPIApp extends Thread{
             log.warning("thread interrupted");
         }
     }
+
     public void run() {// method from thread
         // LOG EVENT //
         Utils.logEventStart(this.idNode);
@@ -113,8 +116,6 @@ public class RPIApp extends Thread{
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-
     }
 
     /**
@@ -132,18 +133,24 @@ public class RPIApp extends Thread{
                 buffer.rewind();
                 this.channel.send(buffer,new InetSocketAddress(rpi.getAddress(),rpi.getPort()));
             }
-
+        }
+    }
+    private void sendStateToRootDevice(ByteBuffer buffer) throws IOException {
+        List<String> arguments = Stream.of(this.idNode, this.temperature, this.vannePosition).map( arg -> String.valueOf(arg)).collect(Collectors.toList());
+        buffer = Utils.createPacketToReSend("state", arguments, buffer);
+        if (this.bestSender!=null) {
+            this.channel.send(buffer,new InetSocketAddress(this.bestSender.getAddress(),this.bestSender.getPort()));
         }
     }
 
     private void onReceiveMessage() throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(MAX_DGRAM_SIZE);
-        InetSocketAddress s = (InetSocketAddress) this.channel.receive(buffer);
+        InetSocketAddress sourceSocket = (InetSocketAddress) this.channel.receive(buffer);
         buffer.flip();
         String[] commandReceived = Utils.splitDataIntoArguments(new String(buffer.array()));
         if (commandReceived.length > 1) {
 
-            RPIApp rpiSource = this.findNeighbor(s.getAddress(), s.getPort());
+            RPIApp rpiSource = this.findNeighbor(sourceSocket.getAddress(), sourceSocket.getPort());
             buffer.rewind();// le buffer commence a la position zero
 
             CommandDecrypted commandDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode());
@@ -183,8 +190,8 @@ public class RPIApp extends Thread{
                         // LOG EVENT
                         Utils.logEventAdvertise(this.idNode, this.bestDistance);
 
-                        buffer = Utils.createPacketToReSend("advertise", String.valueOf(this.bestDistance), buffer);
-                        this.flooding(buffer, s);
+                        buffer = Utils.createPacketToReSend("advertise", Arrays.asList(String.valueOf(this.bestDistance)), buffer);
+                        this.flooding(buffer, sourceSocket);
 
                     }
 
@@ -203,11 +210,15 @@ public class RPIApp extends Thread{
                         // Comme le RPI source est considéré comme le bestSender, on peut lancer le flooding
                         if (rpiSource.equals(this.bestSender)) {
                             // On retransmet le packet comme à l'origine car il contient toutes les infos nécessaires (sans besoin de modifs)
-                            this.flooding(buffer, s);
-
+                            this.flooding(buffer, sourceSocket);
                         }
-
                     }
+                    break;
+                case state:
+                    buffer.rewind();
+                    this.channel.send(buffer,new InetSocketAddress(this.bestSender.getAddress(),this.bestSender.getPort()));
+                    break;
+                default:
                     break;
 
             }

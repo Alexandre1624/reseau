@@ -1,18 +1,22 @@
 package application;
 
+import models.CommandDecrypted;
 import models.Event;
 import models.Node;
 import shared.Utils;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.SocketException;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.channels.DatagramChannel;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 public class RootDevice extends RPIApp {
+
+    private List<Event> events;
 
     /**
      * Constructor of the class
@@ -21,7 +25,50 @@ public class RootDevice extends RPIApp {
     public RootDevice(Node node) throws SocketException {
         super(node,0);
         super.bestDistance = 0;
+    }
 
+    public void bootSocket() throws IOException {
+
+        try {
+            this.channel = DatagramChannel.open();
+            SocketAddress address = new InetSocketAddress(this.address,this.port);
+            this.socket = channel.socket();//creer une channel permettant davoir un socket non bloquant--
+            this.socket.bind(address);
+            this.socket.getChannel().configureBlocking(false);
+            long time = System.currentTimeMillis();
+            Event event = this.events.remove(0);
+            while(true) {
+                // TODO, il faut envoyer un paquet à RootDevice pour qu'il le recoive l'info des états de chaque RPI
+                long d = System.currentTimeMillis();
+                //envoie des events en fonctions de leurs delays
+                if (event!=null && event.delay != 0 && d > time + event.delay) {
+                    // LOG EVENT //
+                    time = System.currentTimeMillis();
+                    this.sendMessage(event);
+                    event = this.events.size() > 0 ? this.events.remove(0): null;
+                }
+
+                this.onReceiveMessage();
+            }
+        } catch (SocketException e) {
+            //e.printStackTrace();
+            log.warning(e.getMessage());
+        } catch (IOException e) {
+            //e.printStackTrace();
+            log.warning(e.getMessage());
+        } finally {
+            log.warning("thread interrupted");
+        }
+    }
+
+    public void run() {// method from thread
+        // LOG EVENT //
+        Utils.logEventStart(this.idNode);
+        try {
+            this.bootSocket();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -32,16 +79,33 @@ public class RootDevice extends RPIApp {
         return "RootDevice => " + super.toString();
     }
 
-    // ne faudrait-il pas générer le packet dans cette méthode (donc pas de parametre)
-    // et envoyer celui-ci en parametre dans la méthode utilisée de UDPManager ?
-    public void advertise(DatagramPacket packet) {
+    private void onReceiveMessage() throws IOException {
+        ByteBuffer buffer = ByteBuffer.allocate(MAX_DGRAM_SIZE);
+      //  InetSocketAddress s = (InetSocketAddress) this.channel.receive(buffer); pour le bonus pour l instant pas besoin
+        buffer.flip();
+        String[] commandReceived = Utils.splitDataIntoArguments(new String(buffer.array()));
+        if (commandReceived.length > 1) {
+            buffer.rewind();// le buffer commence a la position zero
+            CommandDecrypted commandDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode());
 
+            switch (commandDecrypted) {
+                case state:
+                    buffer.rewind();
+                    int fromNodeId = Integer.valueOf(commandReceived[1]);
+                    Double temperature = Double.valueOf(commandReceived[2]);
+                    int vannePosition =  Integer.valueOf(commandReceived[3]);
+                    Utils.logEventReceivedState(this.idNode, fromNodeId, temperature, vannePosition);
+                    break;
+                default:
+                    break;
+
+            }
+        }
     }
 
-    public void sendMessage(Event event) throws InterruptedException, IOException {
+    public void sendMessage(Event event) throws IOException {
         //Utils.logInfo(this.idNode);
         byte[] message;
-        sleep(event.delay);
         switch (event.args.get(0)) {
             case "advertise":
                 // LOG EVENT //
@@ -62,7 +126,6 @@ public class RootDevice extends RPIApp {
                 message = Utils.getByteFromString(";", event.args);
                 sendPacket(message);
                 break;
-
             default:
                 break;
         }
@@ -76,12 +139,12 @@ public class RootDevice extends RPIApp {
             buffer.flip();
             SocketAddress server = new InetSocketAddress(rpi.getAddress(),rpi.getPort());
             channel.send(buffer,server);
-
             // LOG //
             //log.info(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
         }
     }
 
-    // TODO, il faudra un onReceive pour récupérer l'état des différents RPI
-    // et ainsi faire appel à Utils.logEventReceivedState(...)
+    public void setEvents(List<Event> events) {
+        this.events = events;
+    }
 }

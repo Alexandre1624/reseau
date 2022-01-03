@@ -16,14 +16,16 @@ public class Terminal {
     private Map<Integer,RPIApp> devices = new HashMap<>();// we get device in O(1)
     private List<Event> events;
 
-    public Terminal(String filePath) throws  FileFormatException, IOException, FileFormatException {
+    public Terminal(String filePath) throws IOException, FileFormatException {
        this.parserConfig = new ParserConfig(filePath);
     }
-    public void run() throws InterruptedException, IOException {
+
+    public void run() {
 
         this.initApps(this.parserConfig.getNodes(), this.parserConfig.getLinks(), this.parserConfig.getEvents());
     }
-    private void initApps(List<Node> nodes, List<Link> links, List<Event> events) throws InterruptedException, IOException {
+
+    private void initApps(List<Node> nodes, List<Link> links, List<Event> events) {
         /**
          * Creation of the RootDevice (id==1) and others RPIApps
          * more legibility with stream java
@@ -51,7 +53,7 @@ public class Terminal {
         this.runApps();
     }
 
-    private void runApps() throws InterruptedException, IOException {
+    private void runApps() {
         /**
          * Run apps
          */
@@ -60,13 +62,10 @@ public class Terminal {
         });
         this.runTraffic();
     }
-    //just send des list of event to different node
-    private void runTraffic() throws InterruptedException, IOException {
-        for (Event event : this.events) {
-            if (event.nodeId==1) {
-                RootDevice rootDevice = (RootDevice) devices.get(event.nodeId);
-                rootDevice.sendMessage(event);
-            }
-        }
+    //just send list of event to different node
+    private void runTraffic() {
+        RootDevice rootDevice = (RootDevice) devices.get(1);
+        rootDevice.setEvents(this.events);
+        rootDevice.run();
     }
 }
