@@ -21,22 +21,25 @@ public class Terminal {
     }
 
     public void run() {
-
         this.initApps(this.parserConfig.getNodes(), this.parserConfig.getLinks(), this.parserConfig.getEvents());
     }
 
-    private void initApps(List<Node> nodes, List<Link> links, List<Event> events) {
+    private void initApps(List<Node> nodes, List<Link> links, List<Event> events) {   
+        InjectionProperties injectionProperties = new InjectionProperties();
+        Properties propsRPIApp = injectionProperties.getProperties().get("RPIApp.properties");
+        int delay = Integer.valueOf(propsRPIApp.getProperty("delay"));
+        double requestedTemperature = Double.valueOf(propsRPIApp.getProperty("temperature"));
+        int precision = Integer.valueOf(propsRPIApp.getProperty("precision"));
+
+        this.events = events;
+
         /**
          * Creation of the RootDevice (id==1) and others RPIApps
          * more legibility with stream java
          */
-        InjectionProperties injectionProperties = new InjectionProperties();
-        Properties delayRPIApp = injectionProperties.getProperties().get("RPIApp.properties");
-        int delay = Integer.valueOf(delayRPIApp.getProperty("delay"));
-        this.events = events;
         devices = nodes.stream().collect(Collectors.toMap(node -> node.id, node -> {
             try {
-                return node.id ==1 ? new RootDevice(node): new RPIApp(node, delay);
+                return node.id ==1 ? new RootDevice(node, requestedTemperature, precision): new RPIApp(node, delay);
             } catch (SocketException e) {
                 e.printStackTrace();
             }

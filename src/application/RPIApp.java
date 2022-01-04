@@ -1,13 +1,12 @@
 package application;
 
-
 import models.CommandDecrypted;
 import models.Node;
 import shared.Utils;
+
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.DatagramChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,13 +20,14 @@ public class RPIApp extends Thread{
     protected int idNode;
     protected InetAddress address;
     protected int port;
-    protected List<RPIApp> neighbors = new ArrayList();
+    protected List<RPIApp> neighbors = new ArrayList<RPIApp>();
     private RPIApp bestSender = null;
     protected int bestDistance = Integer.MAX_VALUE;
-    protected static double maxTemperature = 20;
-    protected static double minTemperature = 10;
+    protected static int MAX_VALVE_POSITION = 5;
+    protected static double MAX_TEMPERATURE = 20;
+    protected static double MIN_TEMPERATURE = 10;
     private int vannePosition = 0;
-    private double temperature = Double.valueOf(Math.random()*(maxTemperature-minTemperature+1)+minTemperature);
+    private double temperature = Double.valueOf(Math.random()*(MAX_TEMPERATURE-MIN_TEMPERATURE+1)+MIN_TEMPERATURE);
     private int delay;
     protected DatagramChannel channel;
     
@@ -69,7 +69,7 @@ public class RPIApp extends Thread{
      * @return String
      */
     public String toString(){
-        List<Integer> temp = new ArrayList();
+        List<Integer> temp = new ArrayList<Integer>();
         for(RPIApp neighbor : neighbors){ temp.add(neighbor.idNode); }
         return String.format("[RPIApp id:#%d | address:%s | port:%d | neighbors:%s | bestSender:%d]"+System.lineSeparator(),idNode, address, port, temp.toString(), bestSender.getIdNode());
     }
@@ -85,15 +85,17 @@ public class RPIApp extends Thread{
             long time = System.currentTimeMillis();
             ByteBuffer buffer = ByteBuffer.allocate(MAX_DGRAM_SIZE);
             while(true) {
-                // TODO, il faut envoyer un paquet à RootDevice pour qu'il le recoive l'info des états de chaque RPI
                 long d = System.currentTimeMillis();
 
                 if (delay != 0 && d > time + delay) {
+                    time = System.currentTimeMillis();
+
                     // LOG EVENT //
                     Utils.logEventSendState(this.idNode, this.temperature, this.vannePosition);
-                    time = System.currentTimeMillis();
+                    
+                    // On simule l'évolution de la température et on envoie l'état au RootDevice
+                    this.temperature = this.temperatureGiven();
                     this.sendStateToRootDevice(buffer);
-                    //System.out.println(this);
                 }
 
                 this.onReceiveMessage();
@@ -115,7 +117,8 @@ public class RPIApp extends Thread{
         try {
             this.bootSocket();
         } catch (IOException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+            log.warning(e.getMessage());
         }
     }
 
@@ -130,7 +133,7 @@ public class RPIApp extends Thread{
             // On renvoie le paquet à tous les voisins excepté à la source
             if (!(rpi.getAddress().equals(s.getAddress())) || (rpi.getPort() != s.getPort())) {
                 // DEBUG //
-                //System.out.println(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
+                //log.info(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
                 buffer.rewind();
                 this.channel.send(buffer,new InetSocketAddress(rpi.getAddress(),rpi.getPort()));
             }
@@ -231,7 +234,7 @@ public class RPIApp extends Thread{
     }
 
     public Double temperatureGiven() {
-        return Double.valueOf(Math.random() * (maxTemperature-minTemperature+1)+minTemperature) * (1 + (this.vannePosition * 0.15));
+        return Double.valueOf(Math.random() * (MAX_TEMPERATURE-MIN_TEMPERATURE+1)+MIN_TEMPERATURE) * (1 + (this.vannePosition * 0.15));
     }
 
     public void createThread() {

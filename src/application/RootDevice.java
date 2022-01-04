@@ -10,21 +10,24 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.DatagramChannel;
-import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class RootDevice extends RPIApp {
-
+    private double requestedTemperature;
+    private int precision;
     private List<Event> events;
 
     /**
      * Constructor of the class
      * @param Node node
      */
-    public RootDevice(Node node) throws SocketException {
+    public RootDevice(Node node, double requestedTemperature, int precision) throws SocketException {
         super(node,0);
         super.bestDistance = 0;
+        this.requestedTemperature = requestedTemperature;
+        this.precision = precision;
     }
 
     public void bootSocket() throws IOException {
@@ -38,11 +41,9 @@ public class RootDevice extends RPIApp {
             long time = System.currentTimeMillis();
             Event event = this.events.remove(0);
             while(true) {
-                // TODO, il faut envoyer un paquet à RootDevice pour qu'il le recoive l'info des états de chaque RPI
                 long d = System.currentTimeMillis();
                 //envoie des events en fonctions de leurs delays
                 if (event!=null && event.delay != 0 && d > time + event.delay) {
-                    // LOG EVENT //
                     time = System.currentTimeMillis();
                     this.sendMessage(event);
                     event = this.events.size() > 0 ? this.events.remove(0): null;
@@ -84,27 +85,54 @@ public class RootDevice extends RPIApp {
         InetSocketAddress sourceSocket = (InetSocketAddress) this.channel.receive(buffer);
         buffer.flip();
         String[] commandReceived = Utils.splitDataIntoArguments(new String(buffer.array()));
-        
         if (commandReceived.length > 1) {
             buffer.rewind();// le buffer commence a la position zero
             CommandDecrypted commandDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode());
-
+    
             switch (commandDecrypted) {
                 case state:
                     int fromNodeId = Integer.valueOf(commandReceived[1]);
                     Double temperature = Double.valueOf(commandReceived[2]);
                     int vannePosition =  Integer.valueOf(commandReceived[3]);
-
+                    int vannePositionNew = vannePosition;
+    
                     // LOG EVENT //
-                    Utils.logEventReceivedState(this.idNode, fromNodeId, temperature, vannePosition);         
+                    Utils.logEventReceivedState(this.idNode, fromNodeId, temperature, vannePosition);
+                    
+                    // On vérifie si la température n'est pas au dessus ou en dessous de la t° demandée (à la précision près en °)
+                    // Si c'est le cas, on diminue ou on augmente la position de la valve
+                    boolean changeVannePosition = false;
+                    if (temperature > (this.requestedTemperature + this.precision)) {
+                        if (vannePosition > 0) {
+                            changeVannePosition = true;
+                            vannePositionNew--;
+                        }
+                        
+                    } else if (temperature < (this.requestedTemperature - this.precision)) {
+                        if (vannePosition < RPIApp.MAX_VALVE_POSITION) {
+                            changeVannePosition = true;
+                            vannePositionNew++;
+                        }
+                    }
 
+                    // On envoie le changement de position uniquement si le flag est true
+                    if (changeVannePosition) {
+                        List<String> arguments = Stream.of(fromNodeId, vannePositionNew).map( arg -> String.valueOf(arg)).collect(Collectors.toList());
+                        buffer = Utils.createPacketToReSend("vanne", arguments, buffer);
+
+                        // LOG EVENT //
+                        Utils.logEventSetState(1, vannePositionNew, fromNodeId);
+
+                        this.channel.send(buffer, sourceSocket);
+                    }
+    
                     break;
                 default:
                     break;
-
+    
             }
         }
-
+    
     }
 
     public void sendMessage(Event event) throws IOException {
