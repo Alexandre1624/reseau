@@ -16,25 +16,30 @@ public class Terminal {
     private Map<Integer,RPIApp> devices = new HashMap<>();// we get device in O(1)
     private List<Event> events;
 
-    public Terminal(String filePath) throws  FileFormatException, IOException, FileFormatException {
+    public Terminal(String filePath) throws IOException, FileFormatException {
        this.parserConfig = new ParserConfig(filePath);
     }
-    public void run() throws InterruptedException, IOException {
 
+    public void run() {
         this.initApps(this.parserConfig.getNodes(), this.parserConfig.getLinks(), this.parserConfig.getEvents());
     }
-    private void initApps(List<Node> nodes, List<Link> links, List<Event> events) throws InterruptedException, IOException {
+
+    private void initApps(List<Node> nodes, List<Link> links, List<Event> events) {   
+        InjectionProperties injectionProperties = new InjectionProperties();
+        Properties propsRPIApp = injectionProperties.getProperties().get("RPIApp.properties");
+        int delay = Integer.valueOf(propsRPIApp.getProperty("delay"));
+        double requestedTemperature = Double.valueOf(propsRPIApp.getProperty("temperature"));
+        int precision = Integer.valueOf(propsRPIApp.getProperty("precision"));
+
+        this.events = events;
+
         /**
          * Creation of the RootDevice (id==1) and others RPIApps
          * more legibility with stream java
          */
-        InjectionProperties injectionProperties = new InjectionProperties();
-        Properties delayRPIApp = injectionProperties.getProperties().get("RPIApp.properties");
-        int delay = Integer.valueOf(delayRPIApp.getProperty("delay"));
-        this.events = events;
         devices = nodes.stream().collect(Collectors.toMap(node -> node.id, node -> {
             try {
-                return node.id ==1 ? new RootDevice(node): new RPIApp(node, delay);
+                return node.id ==1 ? new RootDevice(node, requestedTemperature, precision): new RPIApp(node, delay);
             } catch (SocketException e) {
                 e.printStackTrace();
             }
@@ -51,22 +56,22 @@ public class Terminal {
         this.runApps();
     }
 
-    private void runApps() throws InterruptedException, IOException {
+    private void runApps() {
         /**
          * Run apps
          */
         devices.forEach((key, value) -> {
-            value.createThread();
+            if(key!=1) {
+                value.createThread();
+            }
+
         });
         this.runTraffic();
     }
-    //just send des list of event to different node
-    private void runTraffic() throws InterruptedException, IOException {
-        for (Event event : this.events) {
-            if (event.nodeId==1) {
-                RootDevice rootDevice = (RootDevice) devices.get(event.nodeId);
-                rootDevice.sendMessage(event);
-            }
-        }
+    //just send list of event to different node
+    private void runTraffic() {
+        RootDevice rootDevice = (RootDevice) devices.get(1);
+        rootDevice.setEvents(this.events);
+        rootDevice.start();
     }
 }

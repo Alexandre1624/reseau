@@ -2,8 +2,8 @@ package models;
 
 public enum CommandEncrypted {
     advertise("advertise".hashCode()),
-    //change state to vanne
-    vanne("vanne".hashCode());
+    vanne("vanne".hashCode()),
+    state("state".hashCode());
 
     private int hashCode;
 

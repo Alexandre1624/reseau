@@ -4,23 +4,11 @@ import models.CommandEncrypted;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Utils {
-    public static int portBase = 4444;
-    public static byte[] Encode(String message, ArrayList<Integer> Nodes) {
-        return null;
-    }
-    public static byte[] Encode(String message) {
-        return null;
-    }
-    public static String Decode( byte[] bytesToString) {
-            return null;
-    }
-
     public static byte[] intToBytes(int i) {
         byte[] result = new byte[4];
 
@@ -41,12 +29,14 @@ public class Utils {
         return result;
     }
 
-    public static ByteBuffer createPacketToReSend(String CommandType, String argumentWithTheCommand, ByteBuffer buffer) throws IOException {
+    public static ByteBuffer createPacketToReSend(String CommandType, List<String> argumentWithTheCommand, ByteBuffer buffer) throws IOException {
         buffer.clear();
         byte[] message;
         List<String> messageToSendToNeighbour = new ArrayList<String>();
         messageToSendToNeighbour.add(CommandType);
-        messageToSendToNeighbour.add(argumentWithTheCommand);
+        for(String arg: argumentWithTheCommand){
+            messageToSendToNeighbour.add(arg);
+        }
         message = getByteFromString(";",messageToSendToNeighbour);
         buffer.put(message,0,message.length);
         buffer.flip();
@@ -69,10 +59,6 @@ public class Utils {
 
     public static String[] splitDataIntoArguments(String packet) {
         return packet.split(";");
-    }
-
-    public long getTimeToSendCommand(String time) {
-        return Long.valueOf(time) + System.currentTimeMillis();
     }
 
     // ********* //
@@ -99,7 +85,7 @@ public class Utils {
         return Utils.logEvent(nodeId, "send state;temperature is " + String.format("%.2f", temperature) + ";state is " + state);
     }
     public static String logEventReceivedState(int nodeId, int nodeIdFrom, double temperature, int state) {
-        return Utils.logEvent(nodeId, "received state from node " + nodeIdFrom + " ;temperature is " + String.format("%.2f", temperature) + ";state is " + state);
+        return Utils.logEvent(nodeId, "received state from node " + nodeIdFrom + ";temperature is " + String.format("%.2f", temperature) + ";state is " + state);
     }
     public static String logEventSetState(int nodeId, int state, int nodeIdTo) {
         return Utils.logEvent(nodeId, "set state " + state + " to node " + nodeIdTo);
