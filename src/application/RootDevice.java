@@ -81,6 +81,7 @@ public class RootDevice extends RPIApp {
 
     protected final void onReceiveMessage() throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(MAX_DGRAM_SIZE);
+        InetSocketAddress sourceSocket = (InetSocketAddress) this.channel.receive(buffer);
         buffer.flip();
         String[] commandReceived = Utils.splitDataIntoArguments(new String(buffer.array()));
         

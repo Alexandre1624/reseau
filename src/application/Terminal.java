@@ -58,7 +58,10 @@ public class Terminal {
          * Run apps
          */
         devices.forEach((key, value) -> {
-            value.createThread();
+            if(key!=1) {
+                value.createThread();
+            }
+
         });
         this.runTraffic();
     }
@@ -66,6 +69,6 @@ public class Terminal {
     private void runTraffic() {
         RootDevice rootDevice = (RootDevice) devices.get(1);
         rootDevice.setEvents(this.events);
-        rootDevice.run();
+        rootDevice.start();
     }
 }
