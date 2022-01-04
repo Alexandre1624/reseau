@@ -79,28 +79,31 @@ public class RootDevice extends RPIApp {
         return "RootDevice => " + super.toString();
     }
 
-    private void onReceiveMessage() throws IOException {
+    protected final void onReceiveMessage() throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(MAX_DGRAM_SIZE);
-      //  InetSocketAddress s = (InetSocketAddress) this.channel.receive(buffer); pour le bonus pour l instant pas besoin
         buffer.flip();
         String[] commandReceived = Utils.splitDataIntoArguments(new String(buffer.array()));
+        
         if (commandReceived.length > 1) {
             buffer.rewind();// le buffer commence a la position zero
             CommandDecrypted commandDecrypted = CommandDecrypted.valueOfCommandToDecrypt(commandReceived[0].hashCode());
 
             switch (commandDecrypted) {
                 case state:
-                    buffer.rewind();
                     int fromNodeId = Integer.valueOf(commandReceived[1]);
                     Double temperature = Double.valueOf(commandReceived[2]);
                     int vannePosition =  Integer.valueOf(commandReceived[3]);
-                    Utils.logEventReceivedState(this.idNode, fromNodeId, temperature, vannePosition);
+
+                    // LOG EVENT //
+                    Utils.logEventReceivedState(this.idNode, fromNodeId, temperature, vannePosition);         
+
                     break;
                 default:
                     break;
 
             }
         }
+
     }
 
     public void sendMessage(Event event) throws IOException {

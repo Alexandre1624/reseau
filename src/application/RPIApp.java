@@ -24,8 +24,8 @@ public class RPIApp extends Thread{
     protected List<RPIApp> neighbors = new ArrayList();
     private RPIApp bestSender = null;
     protected int bestDistance = Integer.MAX_VALUE;
-    private static double maxTemperature = 20;
-    private static double minTemperature = 10;
+    protected static double maxTemperature = 20;
+    protected static double minTemperature = 10;
     private int vannePosition = 0;
     private double temperature = Double.valueOf(Math.random()*(maxTemperature-minTemperature+1)+minTemperature);
     private int delay;
@@ -61,7 +61,7 @@ public class RPIApp extends Thread{
         this.delay = delay;
 
         // LOG EVENT //
-        Utils.logEventSendState(this.idNode, this.temperature, this.vannePosition);
+        //Utils.logEventSendState(this.idNode, this.temperature, this.vannePosition);
     }
 
     /**
@@ -93,6 +93,7 @@ public class RPIApp extends Thread{
                     Utils.logEventSendState(this.idNode, this.temperature, this.vannePosition);
                     time = System.currentTimeMillis();
                     this.sendStateToRootDevice(buffer);
+                    //System.out.println(this);
                 }
 
                 this.onReceiveMessage();
@@ -143,7 +144,7 @@ public class RPIApp extends Thread{
         }
     }
 
-    private void onReceiveMessage() throws IOException {
+    protected void onReceiveMessage() throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(MAX_DGRAM_SIZE);
         InetSocketAddress sourceSocket = (InetSocketAddress) this.channel.receive(buffer);
         buffer.flip();
@@ -215,8 +216,11 @@ public class RPIApp extends Thread{
                     }
                     break;
                 case state:
-                    buffer.rewind();
+                    // LOG EVENT //
+                    //Utils.logEventReceivedState(this.idNode, fromNodeId, temperature, vannePosition);
+
                     this.channel.send(buffer,new InetSocketAddress(this.bestSender.getAddress(),this.bestSender.getPort()));
+
                     break;
                 default:
                     break;
