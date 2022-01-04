@@ -6,7 +6,11 @@ import shared.Utils;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class RootDevice extends RPIApp {
 
@@ -65,9 +69,13 @@ public class RootDevice extends RPIApp {
     }
 
     private void sendPacket(byte[] message) throws IOException {
+        ByteBuffer buffer = ByteBuffer.allocate(message.length);
+        buffer.put(message);
+        buffer.order(ByteOrder.BIG_ENDIAN);
         for(RPIApp rpi: this.neighbors) {
-            DatagramPacket sendPacket = new DatagramPacket(message,message.length, rpi.getAddress(), rpi.getPort());
-            socket.send(sendPacket);
+            buffer.flip();
+            SocketAddress server = new InetSocketAddress(rpi.getAddress(),rpi.getPort());
+            channel.send(buffer,server);
 
             // LOG //
             //log.info(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
