@@ -1,6 +1,6 @@
 package models;
 
-public enum CommandDecrypted { // Nous envoyons unn identifiant unique sous forme de int mais nous devons obligatoirement le transformer en string,
+public enum CommandDecrypted { // Nous envoyons un identifiant unique sous forme de int mais nous devons obligatoirement le transformer en string,
     // de ce fait la conversion change
     advertise("��('".hashCode()),// "��('" = advertise
     vanne("\u0006��\u001A".hashCode()),// "�� = vanne

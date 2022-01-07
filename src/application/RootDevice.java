@@ -35,11 +35,12 @@ public class RootDevice extends RPIApp {
         try {
             this.channel = DatagramChannel.open();
             SocketAddress address = new InetSocketAddress(this.address,this.port);
-            this.socket = channel.socket();//creer une channel permettant davoir un socket non bloquant--
+            this.socket = channel.socket();//créer une channel permettant d'avoir un socket non bloquant
             this.socket.bind(address);
             this.socket.getChannel().configureBlocking(false);
             long time = System.currentTimeMillis();
             Event event = this.events.remove(0);
+            /*boucle permettant d'envoyer les commandes avec un delay entre chaque envoie de paquet*/
             while(true) {
                 long d = System.currentTimeMillis();
                 //envoie des events en fonctions de leurs delays
@@ -136,8 +137,8 @@ public class RootDevice extends RPIApp {
     }
 
     public void sendMessage(Event event) throws IOException {
-        //Utils.logInfo(this.idNode);
         byte[] message;
+        /*envoie une commande en fonction de l'argument */
         switch (event.args.get(0)) {
             case "advertise":
                 // LOG EVENT //
@@ -162,7 +163,9 @@ public class RootDevice extends RPIApp {
                 break;
         }
     }
-
+    /**
+     * envoie une commande à tous les voisins de l'ordinateur centrale 
+     */
     private void sendPacket(byte[] message) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(message.length);
         buffer.put(message);

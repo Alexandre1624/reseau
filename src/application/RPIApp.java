@@ -79,7 +79,7 @@ public class RPIApp extends Thread{
         try {
             this.channel = DatagramChannel.open();
             SocketAddress address = new InetSocketAddress(this.address,this.port);
-            this.socket = channel.socket();//creer une channel permettant davoir un socket non bloquant--
+            this.socket = channel.socket();//créer une channel permettant d'avoir un socket non bloquant
             this.socket.bind(address);
             this.socket.getChannel().configureBlocking(false);
             long time = System.currentTimeMillis();
@@ -124,21 +124,22 @@ public class RPIApp extends Thread{
 
     /**
      * Method to flood packet to neigboors of RPI (except source of this packet)
-     * @param packet
-     * @param s
+     * @param buffer
+     * @param socket
      * @throws IOException
      */
-    protected void flooding(ByteBuffer buffer, InetSocketAddress s) throws IOException {
+    protected void flooding(ByteBuffer buffer, InetSocketAddress socket) throws IOException {
         for (RPIApp rpi : this.neighbors) {
             // On renvoie le paquet à tous les voisins excepté à la source
-            if (!(rpi.getAddress().equals(s.getAddress())) || (rpi.getPort() != s.getPort())) {
+            if (!(rpi.getAddress().equals(socket.getAddress())) || (rpi.getPort() != socket.getPort())) {
                 // DEBUG //
-                //log.info(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
                 buffer.rewind();
                 this.channel.send(buffer,new InetSocketAddress(rpi.getAddress(),rpi.getPort()));
             }
         }
     }
+    /** création du paquet à envoyer vers le rootDevice une fois que l'arbre couvrant a été mis en place
+     * et que l'app sait avec quel autre communiqué */
     private void sendStateToRootDevice(ByteBuffer buffer) throws IOException {
         List<String> arguments = Stream.of(this.idNode, this.temperature, this.vannePosition).map( arg -> String.valueOf(arg)).collect(Collectors.toList());
         buffer = Utils.createPacketToReSend("state", arguments, buffer);
@@ -267,18 +268,6 @@ public class RPIApp extends Thread{
     public RPIApp findNeighbor(InetAddress address, int port) {
         for(RPIApp rpi: this.neighbors) {
             if ((rpi.getAddress().equals(address)) && (rpi.getPort() == port)) 
-                return rpi;
-        }
-        return null;
-    }
-    /**
-     * Find RPIApp neighbor by id inode
-     * @param int idInode
-     * @return RPIApp
-     */
-    public RPIApp findNeighbor(int idNode) {
-        for(RPIApp rpi: this.neighbors) {
-            if (rpi.getIdNode() == idNode)
                 return rpi;
         }
         return null;
