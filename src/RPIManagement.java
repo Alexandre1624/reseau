@@ -5,7 +5,7 @@ import java.io.IOException;
 public class RPIManagement {
 
     public static void main(String[] args) throws FileFormatException, IOException, InterruptedException {
-        Terminal terminal = new application.Terminal(System.getProperty("user.dir") + "/scenario1.config");
+        Terminal terminal = new application.Terminal(System.getProperty("user.dir") + "/scenario.config");
         terminal.run();
     }
 }
