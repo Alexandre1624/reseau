@@ -54,12 +54,12 @@ public class RootDevice extends RPIApp {
             }
         } catch (SocketException e) {
             //e.printStackTrace();
-            log.warning(e.getMessage());
+            Utils.log.warning(e.getMessage());
         } catch (IOException e) {
             //e.printStackTrace();
-            log.warning(e.getMessage());
+            Utils.log.warning(e.getMessage());
         } finally {
-            log.warning("thread interrupted");
+            Utils.log.warning("thread interrupted");
         }
     }
 
@@ -69,7 +69,8 @@ public class RootDevice extends RPIApp {
         try {
             this.bootSocket();
         } catch (IOException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
+            Utils.log.warning(e.getMessage());
         }
     }
 
@@ -174,8 +175,9 @@ public class RootDevice extends RPIApp {
             buffer.flip();
             SocketAddress server = new InetSocketAddress(rpi.getAddress(),rpi.getPort());
             channel.send(buffer,server);
+
             // LOG //
-            //log.info(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
+            Utils.log.info(this.getAddress() + ":" + this.getPort() + " send packet to " + rpi.getAddress() + ":" + rpi.getPort());
         }
     }
 

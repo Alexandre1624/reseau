@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import shared.Utils;
+
 public class InjectionProperties {
     private static Map<String, Properties> properties = new HashMap<>();
 
@@ -27,13 +29,13 @@ public class InjectionProperties {
 
                             properties.put(fileNameSplited[fileNameSplited.length-1], prop);
                         } catch (Exception exception) {
-                            System.out.println("Injection properties a cesser de fonctionner");
-                            exception.printStackTrace();
+                            Utils.log.warning("Injection properties a cesser de fonctionner:" + exception.getMessage());
                             throw new RuntimeException();
                         }
                     });
         } catch (IOException ioException) {
-            ioException.printStackTrace();
+            //ioException.printStackTrace();
+            Utils.log.warning(ioException.getMessage());
         }
     }
 

@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
 
 public class Utils {
     public static byte[] intToBytes(int i) {
@@ -92,5 +94,19 @@ public class Utils {
     }
     public static String logEventNewState(int nodeId, int newState, int oldState) {
         return Utils.logEvent(nodeId, "new state " + newState + ";old state " + oldState);
+    }
+
+    // Logger pour le debug, exceptions et erreurs
+    public static Logger log = Logger.getLogger("RPIManagementLogger");
+    static {
+        try {
+            log.setUseParentHandlers(false);
+            FileHandler fh = new FileHandler("log.txt");
+            log.addHandler(fh); 
+        } catch (SecurityException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

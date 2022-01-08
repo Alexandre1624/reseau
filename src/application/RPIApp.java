@@ -11,8 +11,6 @@ import java.nio.channels.DatagramChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.FileHandler;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -34,20 +32,6 @@ public class RPIApp extends Thread{
     protected DatagramSocket socket;
     // taille maximale d'un datagramme, utilisée pour le buffer de reception
     static int MAX_DGRAM_SIZE = 100;
-
-    // Logger pour le debug (à placer ailleurs Utils, Terminal, ... ???)
-    protected static Logger log = Logger.getLogger(RPIApp.class.getName());
-    static {
-        try {
-            log.setUseParentHandlers(false);
-            FileHandler fh = new FileHandler("log.txt");
-            log.addHandler(fh); 
-        } catch (SecurityException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     /**
      * Constructor of the class
@@ -102,12 +86,12 @@ public class RPIApp extends Thread{
             }
         } catch (SocketException e) {
             //e.printStackTrace();
-            log.warning(e.getMessage());
+            Utils.log.warning(e.getMessage());
         } catch (IOException e) {
             //e.printStackTrace();
-            log.warning(e.getMessage());
+            Utils.log.warning(e.getMessage());
         } finally {
-            log.warning("thread interrupted");
+            Utils.log.warning("thread interrupted");
         }
     }
 
@@ -118,7 +102,7 @@ public class RPIApp extends Thread{
             this.bootSocket();
         } catch (IOException e) {
             //e.printStackTrace();
-            log.warning(e.getMessage());
+            Utils.log.warning(e.getMessage());
         }
     }
 

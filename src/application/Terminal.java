@@ -5,6 +5,7 @@ import models.Event;
 import models.FileFormatException;
 import models.Link;
 import models.Node;
+import shared.Utils;
 
 import java.io.IOException;
 import java.net.SocketException;
@@ -41,7 +42,8 @@ public class Terminal {
             try {
                 return node.id ==1 ? new RootDevice(node, requestedTemperature, precision): new RPIApp(node, delay);
             } catch (SocketException e) {
-                e.printStackTrace();
+                //e.printStackTrace();
+                Utils.log.warning(e.getMessage());
             }
             return null;
         }));
