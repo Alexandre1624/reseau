@@ -1,5 +1,7 @@
 package config;
 
+import shared.Utils;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -7,8 +9,6 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-
-import shared.Utils;
 
 public class InjectionProperties {
     private static Map<String, Properties> properties = new HashMap<>();
